@@ -140,7 +140,7 @@ def detect_stereo(cam_available, stereo_res=(1242, 4416)):
     return stereo_index
 
 def main():
-    capture_stereo()
+    capture_stereo(width=1920*2, height=1080)
 
 if __name__ == '__main__':
     main()
