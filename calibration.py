@@ -302,5 +302,9 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
     np.save(save_path, {'Kl': Kl, 'Dl': Dl, 'Kr': Kr, 'Dr': Dr, 'R': R, 'T': T, 'E': E, 'F': F, 
                        'img_size': img_size, 'left_pts': left_pts, 'right_pts': right_pts})
 
-# executing the stereo_calibration
-stereo_calibration(file_path='images/case2', pattern_size=(8, 4), save_rendered="images/case2_calib")
+def main():
+    # executing the stereo_calibration
+    stereo_calibration(file_path='images/case2', pattern_size=(8, 4), save_rendered="images/case2_calib")
+
+if __name__ == '__main__':
+    main()
