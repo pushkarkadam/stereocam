@@ -240,8 +240,6 @@ def stereo_calibration(file_path, pattern_size):
     pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
     pattern_points = [pattern_points] * len(left_imgs)
 
-    # import pdb; pdb.set_trace()
-
     err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
         pattern_points, left_pts, right_pts, None, None, None, None, img_size, flags=0)
 
