@@ -235,14 +235,16 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
     left_pts, right_pts = [], []
     img_size = None
 
-    for idx, (left_img_path, right_img_path) in enumerate(zip(left_imgs, right_imgs)):
+    for idx, (left_img_path, right_img_path) in enumerate(tqdm(zip(left_imgs, right_imgs))):
         # Reading color images
         I_left = cv2.imread(left_img_path)
         I_right = cv2.imread(right_img_path)
-        
-        # converting to grayscale
-        left_img = cv2.cvtColor(I_left, cv2.COLOR_BGR2GRAY)
-        right_img = cv2.cvtColor(I_right, cv2.COLOR_BGR2GRAY)
+
+        # Again reading image from source using grayscale
+        # The image values will be different if directly read as grayscale vs converted
+        # using cv2.COLOR_BGR2GRAY
+        left_img = cv2.imread(left_img_path, cv2.IMREAD_GRAYSCALE)
+        right_img = cv2.imread(right_img_path, cv2.IMREAD_GRAYSCALE)
         
         # obtaining image size
         if img_size is None:
@@ -262,9 +264,11 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
         left_pts.append(corners_left)
         right_pts.append(corners_right)
 
+        # performs rendering and saves the imamge to save_rendered directory
         if save_rendered:
+            # Creates directory if it does not exist
             if not os.path.exists(save_rendered):
-                os.mkdir(save_rendered)
+                os.makedirs(save_rendered)
                 left_path = os.path.join(save_rendered, 'stereo_left')
                 right_path = os.path.join(save_rendered, 'stereo_right')
                 os.makedirs(left_path)
@@ -284,6 +288,7 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
     pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
     pattern_points = [pattern_points] * len(left_imgs)
 
+    # Stereo calibration
     err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
         pattern_points, left_pts, right_pts, None, None, None, None, img_size, flags=0)
 
@@ -297,4 +302,5 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
     np.save(save_path, {'Kl': Kl, 'Dl': Dl, 'Kr': Kr, 'Dr': Dr, 'R': R, 'T': T, 'E': E, 'F': F, 
                        'img_size': img_size, 'left_pts': left_pts, 'right_pts': right_pts})
 
-stereo_calibration(file_path='images/case1', pattern_size=(9, 6), save_rendered="calib_rendered")
+# executing the stereo_calibration
+stereo_calibration(file_path='images/case2', pattern_size=(8, 4), save_rendered="images/case2_calib")
