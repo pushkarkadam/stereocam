@@ -139,8 +139,21 @@ def detect_stereo(cam_available, stereo_res=(1242, 4416)):
 
     return stereo_index
 
-def main():
-    capture_stereo(width=1920*2, height=1080)
+def initialise_camera(cap):
+    """Initialises the camera for five iterations to avoid missing data.
+    
+    cap: cv2.VideoCapture
+        VideoCapture object of opencv
+    
+    """
+    
+    count_till = 5
 
-if __name__ == '__main__':
-    main()
+    print("Initialising camera...")
+    for i in range(count_till):
+        ret, frame = cap.read()
+        print(f"Frame count: {i}")
+
+        if not ret:
+            print('\033[91m' + "Camera failed to start!")
+            break
