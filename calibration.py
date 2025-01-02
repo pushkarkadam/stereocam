@@ -200,3 +200,51 @@ def calibration(file_path,
         mean_error += error
 
     print(f'total error: {mean_error/len(objpoints)}')
+
+def stereo_calibration(file_path, pattern_size):
+    """Performs stereo calibration"""
+
+    # Creating the path for left and right stereo images
+    left_path = os.path.join(file_path, 'stereo_left/*.png')
+    right_path = os.path.join(file_path, 'stereo_right/*.png')
+
+    # reading the path of the left and right stereo images
+    left_imgs = list(sorted(glob.glob(left_path)))
+    right_imgs = list(sorted(glob.glob(right_path)))
+    
+    # checking if the number of images for left and right stereo are equal
+    assert len(left_imgs) == len(right_imgs)
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    left_pts, right_pts = [], []
+    img_size = None
+
+    for left_img_path, right_img_path in zip(left_imgs, right_imgs):
+        left_img = cv2.imread(left_img_path, cv2.IMREAD_GRAYSCALE)
+        right_img = cv2.imread(right_img_path, cv2.IMREAD_GRAYSCALE)
+        if img_size is None:
+            img_size = (left_img.shape[1], left_img.shape[0])
+        
+        res_left, corners_left = cv2.findChessboardCorners(left_img, pattern_size, None)
+        res_right, corners_right = cv2.findChessboardCorners(right_img, pattern_size, None)
+        
+        corners_left = cv2.cornerSubPix(left_img, corners_left, (11, 11), (-1,-1),
+                                        criteria)
+        corners_right = cv2.cornerSubPix(right_img, corners_right, (11, 11), (-1,-1), 
+                                        criteria)
+        
+        left_pts.append(corners_left)
+        right_pts.append(corners_right)
+
+    pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
+    pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
+    pattern_points = [pattern_points] * len(left_imgs)
+
+    # import pdb; pdb.set_trace()
+
+    err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
+        pattern_points, left_pts, right_pts, None, None, None, None, img_size, flags=0)
+
+    save_path = os.path.join(file_path, 'stereo.npy')
+    np.save(save_path, {'Kl': Kl, 'Dl': Dl, 'Kr': Kr, 'Dr': Dr, 'R': R, 'T': T, 'E': E, 'F': F, 
+                       'img_size': img_size, 'left_pts': left_pts, 'right_pts': right_pts})
