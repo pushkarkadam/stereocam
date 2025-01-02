@@ -5,7 +5,29 @@ import os
 
 
 def capture_stereo(output_path="images", camera_number=None, width=4416, height=1242):
-    """Captures stereo images for calibration"""
+    """Captures stereo images for calibration.
+    
+    Parameters
+    ----------
+    output_path: str
+        Path to store the video.
+        The function will create two sub-directories ``stereo_left`` and ``stereo_right``.
+    camera_number: int
+        The camera number.
+        This can be ``None`` if the camera is unknown the
+        :func:`stereocam.capture_images.detect_camera`
+        and
+        :func:`stereocam.capture_images.detect_stereo`
+        are used.
+    width: int
+        Width of the image.
+        This is the total width of the stereo camera that includes left and right image.
+        For getting ``1920 x 1080`` resolution, the width should be ``1920 x 2 = 3840``.
+    height: int
+        Height of the image.
+        Both the cameras of the stereo rig will have same height.
+    
+    """
     
 
     # If the camera number index is not provided in the function then perform auto detection
@@ -157,3 +179,96 @@ def initialise_camera(cap):
         if not ret:
             print('\033[91m' + "Camera failed to start!")
             break
+
+def record_stereo(output_path, camera_number, width, height):
+    """Records stereo videos.
+    
+    Parameters
+    ----------
+    output_path: str
+        Path to store the video.
+        The function will create two sub-directories ``stereo_left`` and ``stereo_right``.
+    camera_number: int
+        The camera number.
+        This can be ``None`` if the camera is unknown the
+        :func:`stereocam.capture_images.detect_camera`
+        and
+        :func:`stereocam.capture_images.detect_stereo`
+        are used.
+    width: int
+        Width of the image.
+        This is the total width of the stereo camera that includes left and right image.
+        For getting ``1920 x 1080`` resolution, the width should be ``1920 x 2 = 3840``.
+    height: int
+        Height of the image.
+        Both the cameras of the stereo rig will have same height.
+
+    """
+
+    # If the camera number index is not provided in the function then perform auto detection
+    if not camera_number:
+        # Detecting available cameras
+        cam_available = detect_camera()
+
+        # Selecting stereo camera
+        camera_number = detect_stereo(cam_available)
+
+    # date 
+    ct = datetime.datetime.now()
+    date = ct.strftime("%d-%m-%Y-%H-%M")
+
+    # Make directory for saving both left and right images
+    path_left = os.path.join(output_path, date, 'stereo_left')
+    path_right = os.path.join(output_path, date, 'stereo_right')
+
+    print(f"Creating directories: \n{path_left}\n{path_right}")
+    os.makedirs(path_left)
+    os.makedirs(path_right)
+
+    # Open the video capture for stereo camera
+    cap = cv2.VideoCapture(camera_number)
+
+    # Creating resolution
+    resolution = (int(width), int(height))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
+    # wait till the camera has been initialised for 5 iterations
+    initialise_camera(cap)
+
+    # Create video writers for left and right cameras
+    left_writer = cv2.VideoWriter(os.path.join(path_left, 'left.avi'), cv2.VideoWriter_fourcc(*'XVID'), 30, (width // 2, height))
+    right_writer = cv2.VideoWriter(os.path.join(path_right, 'right.avi'), cv2.VideoWriter_fourcc(*'XVID'), 30, (width // 2, height))
+
+
+    while cap.isOpened():
+        # Read frames from the stereo camera
+        retval, frame = cap.read()
+
+        if not retval:
+            print('\033[91m' + "Camera failed to start!")
+            break
+
+        # Split the frame into left and right images
+        left_frame = frame[:, :width // 2, :]
+        right_frame = frame[:, width // 2:, :]
+
+        # Write frames to the corresponding video writers
+        left_writer.write(left_frame)
+        right_writer.write(right_frame)
+
+        # # Display the frames
+        cv2.imshow('Left Camera', left_frame)
+        cv2.imshow('Right Camera', right_frame)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Release the video capture and video writers
+    cap.release()
+    left_writer.release()
+    right_writer.release()
+
+    # Destroy all windows
+    cv2.destroyAllWindows()
