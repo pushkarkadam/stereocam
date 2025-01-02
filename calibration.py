@@ -201,9 +201,25 @@ def calibration(file_path,
 
     print(f'total error: {mean_error/len(objpoints)}')
 
-def stereo_calibration(file_path, pattern_size):
-    """Performs stereo calibration"""
+def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=None):
+    """Performs stereo calibration.
+    Saves the camera matrix to the location of 
+    
+    Paramteres
+    ----------
+    file_path: str
+        Path to where the stereo images are stored.
+        The storage format must be ``file_path/stereo_left`` and file_path/stereo_right``.
+        The ``file_path`` must comprise of two subdirectories ``stereo_left`` and ``stereo_right``.
+    patter_size: tuple
+        A tuple of the pattern size.
+        Use one size less for pattern.
+        For a chess board of ``9 x 8`` pattern, use the input as ``(8, 7)``.
+    save_path: str, default ``None ``
+        If the save path is provided, then the parameters are saved in this location
+        otherwise the parameters are saved in the same parent directory of ``file_path``.
 
+    """
     # Creating the path for left and right stereo images
     left_path = os.path.join(file_path, 'stereo_left/*.png')
     right_path = os.path.join(file_path, 'stereo_right/*.png')
@@ -219,22 +235,50 @@ def stereo_calibration(file_path, pattern_size):
     left_pts, right_pts = [], []
     img_size = None
 
-    for left_img_path, right_img_path in zip(left_imgs, right_imgs):
-        left_img = cv2.imread(left_img_path, cv2.IMREAD_GRAYSCALE)
-        right_img = cv2.imread(right_img_path, cv2.IMREAD_GRAYSCALE)
+    for idx, (left_img_path, right_img_path) in enumerate(zip(left_imgs, right_imgs)):
+        # Reading color images
+        I_left = cv2.imread(left_img_path)
+        I_right = cv2.imread(right_img_path)
+        
+        # converting to grayscale
+        left_img = cv2.cvtColor(I_left, cv2.COLOR_BGR2GRAY)
+        right_img = cv2.cvtColor(I_right, cv2.COLOR_BGR2GRAY)
+        
+        # obtaining image size
         if img_size is None:
             img_size = (left_img.shape[1], left_img.shape[0])
         
+        # Finding the chessboard corners for left and right images
         res_left, corners_left = cv2.findChessboardCorners(left_img, pattern_size, None)
         res_right, corners_right = cv2.findChessboardCorners(right_img, pattern_size, None)
         
+        # Refining corners
         corners_left = cv2.cornerSubPix(left_img, corners_left, (11, 11), (-1,-1),
                                         criteria)
         corners_right = cv2.cornerSubPix(right_img, corners_right, (11, 11), (-1,-1), 
                                         criteria)
         
+        # Appending the corner points
         left_pts.append(corners_left)
         right_pts.append(corners_right)
+
+        if save_rendered:
+            if not os.path.exists(save_rendered):
+                os.mkdir(save_rendered)
+                left_path = os.path.join(save_rendered, 'stereo_left')
+                right_path = os.path.join(save_rendered, 'stereo_right')
+                os.makedirs(left_path)
+                os.makedirs(right_path)
+
+            cv2.drawChessboardCorners(I_left, pattern_size, corners_left, res_left)
+            cv2.drawChessboardCorners(I_right, pattern_size, corners_right, res_right)
+            cv2.imshow('left_img', I_left)
+            cv2.imshow('right_img', I_right)
+            cv2.waitKey(500)
+            cv2.imwrite(os.path.join(left_path, f"left_img{idx}.png"), I_left)
+            cv2.imwrite(os.path.join(right_path, f"right_img{idx}.png"), I_right)
+
+    cv2.destroyAllWindows()
 
     pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
     pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
@@ -243,6 +287,14 @@ def stereo_calibration(file_path, pattern_size):
     err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
         pattern_points, left_pts, right_pts, None, None, None, None, img_size, flags=0)
 
-    save_path = os.path.join(file_path, 'stereo.npy')
+    # If the save path is provided otherwise saves at the same location as data.
+    if save_path:
+        save_path = os.path.join(save_path, 'stereo.npy')
+    else:
+        save_path = os.path.join(file_path, 'stereo.npy')
+    
+    # saves the camera parameters.
     np.save(save_path, {'Kl': Kl, 'Dl': Dl, 'Kr': Kr, 'Dr': Dr, 'R': R, 'T': T, 'E': E, 'F': F, 
                        'img_size': img_size, 'left_pts': left_pts, 'right_pts': right_pts})
+
+stereo_calibration(file_path='images/case1', pattern_size=(9, 6), save_rendered="calib_rendered")
