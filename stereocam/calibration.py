@@ -201,7 +201,7 @@ def calibration(file_path,
 
     print(f'total error: {mean_error/len(objpoints)}')
 
-def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=None):
+def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=None, save_rendered=None):
     """Performs stereo calibration.
     Saves the camera matrix to the location of 
     
@@ -215,6 +215,9 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
         A tuple of the pattern size.
         Use one size less for pattern.
         For a chess board of ``9 x 8`` pattern, use the input as ``(8, 7)``.
+    chess_box_size: int, default ``30``
+        The chess box size of each grid. 
+        The default value is ``30 cm``
     save_path: str, default ``None ``
         If the save path is provided, then the parameters are saved in this location
         otherwise the parameters are saved in the same parent directory of ``file_path``.
@@ -235,6 +238,25 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
     left_pts, right_pts = [], []
     img_size = None
 
+    pattern_points_vec = np.zeros((np.prod(pattern_size), 3), np.float32)
+    pattern_points_vec[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
+
+    # Multiplying the coordinate indices with chess box grid dimension
+    pattern_points_vec = pattern_points_vec * chess_box_size
+    
+    # We create a list of arrays equivalent to the number of images.
+    # Another way of doing this is to append pattern_points in each iteration.
+    # so that the left_pts, right_pts, and pattern_points list have same size.
+    # This will save the mismatch error during calibration.
+    # however, if you are sure that all the images are clearn and their
+    # corners are detected, then, multiplying pattern_points with number
+    # of images saves appending operations.
+    
+    # pattern_points = [pattern_points_vec] * len(left_imgs)
+    
+    # creating pattern_points as an empty list to populate later.
+    pattern_points = []
+
     for idx, (left_img_path, right_img_path) in enumerate(tqdm(zip(left_imgs, right_imgs))):
         # Reading color images
         I_left = cv2.imread(left_img_path)
@@ -253,40 +275,39 @@ def stereo_calibration(file_path, pattern_size, save_path=None, save_rendered=No
         # Finding the chessboard corners for left and right images
         res_left, corners_left = cv2.findChessboardCorners(left_img, pattern_size, None)
         res_right, corners_right = cv2.findChessboardCorners(right_img, pattern_size, None)
-        
-        # Refining corners
-        corners_left = cv2.cornerSubPix(left_img, corners_left, (11, 11), (-1,-1),
-                                        criteria)
-        corners_right = cv2.cornerSubPix(right_img, corners_right, (11, 11), (-1,-1), 
-                                        criteria)
-        
-        # Appending the corner points
-        left_pts.append(corners_left)
-        right_pts.append(corners_right)
 
-        # performs rendering and saves the imamge to save_rendered directory
-        if save_rendered:
-            # Creates directory if it does not exist
-            if not os.path.exists(save_rendered):
-                os.makedirs(save_rendered)
-                left_path = os.path.join(save_rendered, 'stereo_left')
-                right_path = os.path.join(save_rendered, 'stereo_right')
-                os.makedirs(left_path)
-                os.makedirs(right_path)
+        if res_left and res_right:
+            pattern_points.append(pattern_points_vec)
+        
+            # Refining corners
+            corners_left = cv2.cornerSubPix(left_img, corners_left, (11, 11), (-1,-1),
+                                            criteria)
+            corners_right = cv2.cornerSubPix(right_img, corners_right, (11, 11), (-1,-1), 
+                                            criteria)
+            
+            # Appending the corner points
+            left_pts.append(corners_left)
+            right_pts.append(corners_right)
 
-            cv2.drawChessboardCorners(I_left, pattern_size, corners_left, res_left)
-            cv2.drawChessboardCorners(I_right, pattern_size, corners_right, res_right)
-            cv2.imshow('left_img', I_left)
-            cv2.imshow('right_img', I_right)
-            cv2.waitKey(500)
-            cv2.imwrite(os.path.join(left_path, f"left_img{idx}.png"), I_left)
-            cv2.imwrite(os.path.join(right_path, f"right_img{idx}.png"), I_right)
+            # performs rendering and saves the imamge to save_rendered directory
+            if save_rendered:
+                # Creates directory if it does not exist
+                if not os.path.exists(save_rendered):
+                    os.makedirs(save_rendered)
+                    left_path = os.path.join(save_rendered, 'stereo_left')
+                    right_path = os.path.join(save_rendered, 'stereo_right')
+                    os.makedirs(left_path)
+                    os.makedirs(right_path)
+
+                cv2.drawChessboardCorners(I_left, pattern_size, corners_left, res_left)
+                cv2.drawChessboardCorners(I_right, pattern_size, corners_right, res_right)
+                cv2.imshow('left_img', I_left)
+                cv2.imshow('right_img', I_right)
+                cv2.waitKey(500)
+                cv2.imwrite(os.path.join(left_path, f"left_img{idx}.png"), I_left)
+                cv2.imwrite(os.path.join(right_path, f"right_img{idx}.png"), I_right)
 
     cv2.destroyAllWindows()
-
-    pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
-    pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
-    pattern_points = [pattern_points] * len(left_imgs)
 
     # Stereo calibration
     err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
