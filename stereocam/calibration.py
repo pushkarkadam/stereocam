@@ -311,7 +311,19 @@ def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=Non
 
     # Stereo calibration
     err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
-        pattern_points, left_pts, right_pts, None, None, None, None, img_size, flags=0)
+        objectPoints=pattern_points, 
+        imagePoints1=left_pts, 
+        imagePoints2=right_pts, 
+        cameraMatrix1=None, 
+        distCoeffs1=None, 
+        cameraMatrix2=None, 
+        distCoeffs2=None, 
+        imageSize=img_size, 
+        flags=0
+        )
+
+
+    print(f'Overall projection error: {err}')
 
     # If the save path is provided otherwise saves at the same location as data.
     if save_path:
@@ -320,5 +332,16 @@ def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=Non
         save_path = os.path.join(file_path, 'stereo.npy')
     
     # saves the camera parameters.
-    np.save(save_path, {'Kl': Kl, 'Dl': Dl, 'Kr': Kr, 'Dr': Dr, 'R': R, 'T': T, 'E': E, 'F': F, 
-                       'img_size': img_size, 'left_pts': left_pts, 'right_pts': right_pts})
+    np.save(save_path, {
+        'Kl': Kl, 
+        'Dl': Dl, 
+        'Kr': Kr, 
+        'Dr': Dr, 
+        'R': R, 
+        'T': T, 
+        'E': E, 
+        'F': F, 
+        'img_size': img_size, 
+        'left_pts': left_pts, 
+        'right_pts': right_pts
+        })

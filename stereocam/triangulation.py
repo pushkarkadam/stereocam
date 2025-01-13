@@ -55,7 +55,6 @@ def rectify_stereo_image(left_img, right_img, data, save_path=None):
 def disparity_depth_map(left_img, 
                         right_img, 
                         baseline,
-                        focal_length,
                         data, 
                         algorithm="bm",  
                         save_path=None,
@@ -92,16 +91,26 @@ def disparity_depth_map(left_img,
                                  data['R'], data['T'], data['img_size']
 
 
+    # focal length
+    # Using camera intrinsic matrix Kl and Kr to compute fxl and fxr
+    fxl, fxr = Kl[0][0], Kr[0][0]
+
+    focal_length = (fxl + fxr)/2
+
     if algorithm == "bm":
         stereo_alg = cv2.StereoBM_create(**kwargs)
     else:
         stereo_alg = cv2.StereoSGBM_create(**kwargs)
 
-    disp_map = stereo_alg.compute(cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY), 
+    raw_disp_map = stereo_alg.compute(cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY), 
                                   cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
                                  )
 
+    # diving the raw disparity with the scaling factor
+    disp_map = raw_disp_map / 16
+
     disparity_map = np.where(disp_map <= 0, 1e-5, disp_map)
+
 
     depth_map = (baseline * focal_length) / disparity_map
 
