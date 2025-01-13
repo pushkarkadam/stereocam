@@ -7,7 +7,9 @@ from tqdm import tqdm
 
 def rectify_stereo_image(left_img, right_img, data, save_path=None):
     """Rectifies the image for triangulation.
-    
+
+    Parameters
+    ----------
     left_img: numpy.ndarray
         A numpy image or file path to the image.
     right_img: numpy.ndarray
