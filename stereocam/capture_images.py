@@ -280,3 +280,19 @@ def record_stereo(output_path, camera_number, width, height):
 
     # Destroy all windows
     cv2.destroyAllWindows()
+
+def split_stereo(frame):
+    """Splits the stereo image into left and right frames.
+
+    Parameters
+    ----------
+    frame: numpy.ndarray
+        Stereo image frame.
+
+    """
+    height, width, _ = frame.shape 
+
+    left_frame = frame[:, :width // 2, :]
+    right_frame = frame[:, width // 2:, :]
+
+    return left_frame, right_frame
