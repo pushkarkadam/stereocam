@@ -137,6 +137,13 @@ def detect_stereo(cam_available, stereo_res=(1242, 4416)):
     Making certain assumptions about what stereo images consist.
     Assuming the stereo camera is connected using a USB and USB is the last camera to be detected.
     Assuming stereo camera has a certain resolution that is expected.
+
+    Parameters
+    ----------
+    cam_available: int
+        Checks if the system camera input is a stereo.
+    stereo_res: tuple, default ``(1242, 4416)``
+        Resolution of the left and right combined images of the stereo camera.
     
     """
     # Using the last value of the cam_available list because it has a potential to be stereo
@@ -163,12 +170,13 @@ def detect_stereo(cam_available, stereo_res=(1242, 4416)):
 
 def initialise_camera(cap):
     """Initialises the camera for five iterations to avoid missing data.
-    
+
+    Parameters
+    ----------
     cap: cv2.VideoCapture
         VideoCapture object of opencv
     
     """
-    
     count_till = 5
 
     print("Initialising camera...")

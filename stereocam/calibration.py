@@ -202,8 +202,9 @@ def calibration(file_path,
     print(f'total error: {mean_error/len(objpoints)}')
 
 def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=None, save_rendered=None):
-    """Performs stereo calibration.
-    Saves the camera matrix to the location of 
+    r"""Performs stereo calibration.
+    
+    Saves the camera matrix  as a dictionary and can be loaded using ``numpy.load()`` function.
     
     Paramteres
     ----------
@@ -218,9 +219,16 @@ def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=Non
     chess_box_size: int, default ``30``
         The chess box size of each grid. 
         The default value is ``30 cm``
-    save_path: str, default ``None ``
+    save_path: str, default ``None``
         If the save path is provided, then the parameters are saved in this location
         otherwise the parameters are saved in the same parent directory of ``file_path``.
+    save_rendered: str, default ``None``
+        Saves the rendered stereo corner matching if the path is provided.
+
+    Examples
+    --------
+    >>> from stereocam import *
+    >>> stereo_calibration(file_path='../images/case2', pattern_size=(8, 4), chess_box_size=30, save_rendered="../images/case2_calib")
 
     """
     # Creating the path for left and right stereo images
