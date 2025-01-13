@@ -200,3 +200,148 @@ def calibration(file_path,
         mean_error += error
 
     print(f'total error: {mean_error/len(objpoints)}')
+
+def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=None, save_rendered=None):
+    """Performs stereo calibration.
+    Saves the camera matrix to the location of 
+    
+    Paramteres
+    ----------
+    file_path: str
+        Path to where the stereo images are stored.
+        The storage format must be ``file_path/stereo_left`` and file_path/stereo_right``.
+        The ``file_path`` must comprise of two subdirectories ``stereo_left`` and ``stereo_right``.
+    patter_size: tuple
+        A tuple of the pattern size.
+        Use one size less for pattern.
+        For a chess board of ``9 x 8`` pattern, use the input as ``(8, 7)``.
+    chess_box_size: int, default ``30``
+        The chess box size of each grid. 
+        The default value is ``30 cm``
+    save_path: str, default ``None ``
+        If the save path is provided, then the parameters are saved in this location
+        otherwise the parameters are saved in the same parent directory of ``file_path``.
+
+    """
+    # Creating the path for left and right stereo images
+    left_path = os.path.join(file_path, 'stereo_left/*.png')
+    right_path = os.path.join(file_path, 'stereo_right/*.png')
+
+    # reading the path of the left and right stereo images
+    left_imgs = list(sorted(glob.glob(left_path)))
+    right_imgs = list(sorted(glob.glob(right_path)))
+    
+    # checking if the number of images for left and right stereo are equal
+    assert len(left_imgs) == len(right_imgs)
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    left_pts, right_pts = [], []
+    img_size = None
+
+    pattern_points_vec = np.zeros((np.prod(pattern_size), 3), np.float32)
+    pattern_points_vec[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
+
+    # Multiplying the coordinate indices with chess box grid dimension
+    pattern_points_vec = pattern_points_vec * chess_box_size
+    
+    # We create a list of arrays equivalent to the number of images.
+    # Another way of doing this is to append pattern_points in each iteration.
+    # so that the left_pts, right_pts, and pattern_points list have same size.
+    # This will save the mismatch error during calibration.
+    # however, if you are sure that all the images are clearn and their
+    # corners are detected, then, multiplying pattern_points with number
+    # of images saves appending operations.
+    
+    # pattern_points = [pattern_points_vec] * len(left_imgs)
+    
+    # creating pattern_points as an empty list to populate later.
+    pattern_points = []
+
+    for idx, (left_img_path, right_img_path) in enumerate(tqdm(zip(left_imgs, right_imgs))):
+        # Reading color images
+        I_left = cv2.imread(left_img_path)
+        I_right = cv2.imread(right_img_path)
+
+        # Again reading image from source using grayscale
+        # The image values will be different if directly read as grayscale vs converted
+        # using cv2.COLOR_BGR2GRAY
+        left_img = cv2.imread(left_img_path, cv2.IMREAD_GRAYSCALE)
+        right_img = cv2.imread(right_img_path, cv2.IMREAD_GRAYSCALE)
+        
+        # obtaining image size
+        if img_size is None:
+            img_size = (left_img.shape[1], left_img.shape[0])
+        
+        # Finding the chessboard corners for left and right images
+        res_left, corners_left = cv2.findChessboardCorners(left_img, pattern_size, None)
+        res_right, corners_right = cv2.findChessboardCorners(right_img, pattern_size, None)
+
+        if res_left and res_right:
+            pattern_points.append(pattern_points_vec)
+        
+            # Refining corners
+            corners_left = cv2.cornerSubPix(left_img, corners_left, (11, 11), (-1,-1),
+                                            criteria)
+            corners_right = cv2.cornerSubPix(right_img, corners_right, (11, 11), (-1,-1), 
+                                            criteria)
+            
+            # Appending the corner points
+            left_pts.append(corners_left)
+            right_pts.append(corners_right)
+
+            # performs rendering and saves the imamge to save_rendered directory
+            if save_rendered:
+                # Creates directory if it does not exist
+                if not os.path.exists(save_rendered):
+                    os.makedirs(save_rendered)
+                    left_path = os.path.join(save_rendered, 'stereo_left')
+                    right_path = os.path.join(save_rendered, 'stereo_right')
+                    os.makedirs(left_path)
+                    os.makedirs(right_path)
+
+                cv2.drawChessboardCorners(I_left, pattern_size, corners_left, res_left)
+                cv2.drawChessboardCorners(I_right, pattern_size, corners_right, res_right)
+                cv2.imshow('left_img', I_left)
+                cv2.imshow('right_img', I_right)
+                cv2.waitKey(500)
+                cv2.imwrite(os.path.join(left_path, f"left_img{idx}.png"), I_left)
+                cv2.imwrite(os.path.join(right_path, f"right_img{idx}.png"), I_right)
+
+    cv2.destroyAllWindows()
+
+    # Stereo calibration
+    err, Kl, Dl, Kr, Dr, R, T, E, F = cv2.stereoCalibrate(
+        objectPoints=pattern_points, 
+        imagePoints1=left_pts, 
+        imagePoints2=right_pts, 
+        cameraMatrix1=None, 
+        distCoeffs1=None, 
+        cameraMatrix2=None, 
+        distCoeffs2=None, 
+        imageSize=img_size, 
+        flags=0
+        )
+
+
+    print(f'Overall projection error: {err}')
+
+    # If the save path is provided otherwise saves at the same location as data.
+    if save_path:
+        save_path = os.path.join(save_path, 'stereo.npy')
+    else:
+        save_path = os.path.join(file_path, 'stereo.npy')
+    
+    # saves the camera parameters.
+    np.save(save_path, {
+        'Kl': Kl, 
+        'Dl': Dl, 
+        'Kr': Kr, 
+        'Dr': Dr, 
+        'R': R, 
+        'T': T, 
+        'E': E, 
+        'F': F, 
+        'img_size': img_size, 
+        'left_pts': left_pts, 
+        'right_pts': right_pts
+        })
