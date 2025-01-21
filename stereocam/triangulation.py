@@ -122,8 +122,6 @@ def disparity_depth_map(left_img,
 
     filtered_disparity = wls_filter.filter(disp_map, left_img, disparity_map_right=disparity_right)
 
-    # Normalise the disparity maps for visualization
-
     disparity_map = np.where(disp_map <= 0, 1e-5, disp_map)
 
     filtered_disparity = np.where(filtered_disparity <= 0, 1e-5, filtered_disparity)
