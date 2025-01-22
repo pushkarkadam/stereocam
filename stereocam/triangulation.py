@@ -61,7 +61,7 @@ def disparity_depth_map(left_img,
                         algorithm="bm",  
                         save_path=None,
                         wls_lambda=8000,
-                        wls_sigma=1.5,
+                        wls_sigma=2.5,
                         **kwargs):
     """Returns disparity and depth map of the image.
 
@@ -75,6 +75,10 @@ def disparity_depth_map(left_img,
         A dictionary of camera parameters or a ``.npy`` file.
     save_path: str, default ``None``
         If path is given, then saves the rectified images to that path.
+    wls_lambda: int, default ``8000``
+        Lambda value for weighted least squares filter.
+    wls_sigma: float, default ``2.5``
+        Sigma value for weighted least squares filter.
     
     Returns
     -------
@@ -126,7 +130,7 @@ def disparity_depth_map(left_img,
 
     filtered_disparity = np.where(filtered_disparity <= 0, 1e-5, filtered_disparity)
 
-    depth_map = (baseline * focal_length) / disparity_map
+    depth_map = (baseline * focal_length) / filtered_disparity
 
     if save_path:
         disp_path = os.path.join(save_path, "disp_map.png")
