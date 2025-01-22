@@ -2,6 +2,8 @@ import streamlit as st
 import numpy as np
 import cv2
 import time
+import os
+import yaml
 from stereocam import *
 
 
@@ -18,14 +20,14 @@ num_disp_factor = 22
 window_size = 5
 min_disp = 300
 wls_lambda = 8000
-wls_sigma = 1.2
+wls_sigma = 2.5
 
 
 # Detect all the possible cameras
 cam_available = detect_camera()
 
 # Select stereo camera
-camera_number = detect_stereo(cam_available)
+stereo_retval, camera_number = detect_stereo(cam_available)
 
 # Creating a video capture object using the detected stereo camera
 cap = cv2.VideoCapture(camera_number)
@@ -84,7 +86,35 @@ with st.container():
                         "speckleRange": speckleRange,
                         "mode": 0
                         }
+
+            if st.button("Save Params", type="primary"):
+                param_storage = {"num_disp_factor": num_disp_factor,
+                    "min_disp": min_dip,
+                    "window_size": window_size,
+                    "disp12MaxDiff": disp12MaxDiff,
+                    "preFilterCap": preFilterCap,
+                    "uniquenessRatio": uniquenessRatio,
+                    "speckleWindowSize": speckleWindowSize,
+                    "speckleRange": speckleRange,
+                    "wls_lambda": wls_lambda,
+                    "wld_sigma": wls_sigma,
+                    "baseline": baseline,
+                }
+                if not os.path.exists("images"):
+                    os.makedirs("images")
+
+                params_storage_path = os.path.join("images", f"disparity_params_{int(time.time())}.yaml")
+
+                with open(params_storage_path, 'w') as outfile:
+                    yaml.dump(param_storage, outfile, default_flow_style=False)
+
     with col2:
+        with st.container():
+            if stereo_retval:
+                st.success("Stereo successfully detected.", icon="✅")
+            if not stereo_retval:
+                st.warning("May not be stereo. Change some parameter or reload the page.")
+
         with st.container():
             st.markdown("## Video")
 
