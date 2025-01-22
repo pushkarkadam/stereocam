@@ -40,11 +40,6 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, width * 2)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
 
-# Use this line to capture video from the webcam
-# cap = cv2.VideoCapture(0)
-# initialise_camera(cap)
-
-
 # -----------streamlit page ------------------------
 
 st.set_page_config(layout="wide")
