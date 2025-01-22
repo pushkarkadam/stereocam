@@ -4,6 +4,8 @@ import cv2
 import time
 import os
 import yaml
+import pickle
+import copy
 from stereocam import *
 
 
@@ -21,7 +23,6 @@ window_size = 5
 min_disp = 300
 wls_lambda = 8000
 wls_sigma = 2.5
-
 
 # Detect all the possible cameras
 cam_available = detect_camera()
@@ -106,7 +107,7 @@ with st.container():
                 params_storage_path = os.path.join("images", f"disparity_params_{int(time.time())}.yaml")
 
                 with open(params_storage_path, 'w') as outfile:
-                    yaml.dump(param_storage, outfile, default_flow_style=False)
+                    yaml.dump(param_storage, outfile, default_flow_style=False)    
 
     with col2:
         with st.container():
@@ -148,7 +149,7 @@ with st.container():
                     wls_sigma=wls_sigma,
                     **sgbm_params
                 )
-                
+
                 # Converting the image format for streamlit visualisation
                 disp_map = np.uint8(disp_map)
                 filtered_disp_map = np.uint8(filtered_disp_map)
