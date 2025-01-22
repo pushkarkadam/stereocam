@@ -60,6 +60,8 @@ def disparity_depth_map(left_img,
                         data, 
                         algorithm="bm",  
                         save_path=None,
+                        wls_lambda=8000,
+                        wls_sigma=2.5,
                         **kwargs):
     """Returns disparity and depth map of the image.
 
@@ -73,6 +75,10 @@ def disparity_depth_map(left_img,
         A dictionary of camera parameters or a ``.npy`` file.
     save_path: str, default ``None``
         If path is given, then saves the rectified images to that path.
+    wls_lambda: int, default ``8000``
+        Lambda value for weighted least squares filter.
+    wls_sigma: float, default ``2.5``
+        Sigma value for weighted least squares filter.
     
     Returns
     -------
@@ -104,22 +110,34 @@ def disparity_depth_map(left_img,
     else:
         stereo_alg = cv2.StereoSGBM_create(**kwargs)
 
-    raw_disp_map = stereo_alg.compute(cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY), 
+    disp_map = stereo_alg.compute(cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY), 
                                   cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
-                                 )
+                                 ).astype(np.float32) / 16.0
 
-    # diving the raw disparity with the scaling factor
-    disp_map = raw_disp_map / 16
+
+    wls_filter = cv2.ximgproc.createDisparityWLSFilter(matcher_left=stereo_alg)
+    right_matcher = cv2.ximgproc.createRightMatcher(stereo_alg)
+
+    disparity_right = right_matcher.compute(right_img, left_img).astype(np.float32) / 16.0
+
+    # Apply WLS filter
+    wls_filter.setLambda(wls_lambda)
+    wls_filter.setSigmaColor(wls_sigma)
+
+    filtered_disparity = wls_filter.filter(disp_map, left_img, disparity_map_right=disparity_right)
 
     disparity_map = np.where(disp_map <= 0, 1e-5, disp_map)
 
+    filtered_disparity = np.where(filtered_disparity <= 0, 1e-5, filtered_disparity)
 
-    depth_map = (baseline * focal_length) / disparity_map
+    depth_map = (baseline * focal_length) / filtered_disparity
 
     if save_path:
         disp_path = os.path.join(save_path, "disp_map.png")
+        filtered_disp_path = os.path.join(save_path, "filtered_disp_map.png")
         depth_path = os.path.join(save_path, "depth_map.png")
         cv2.imwrite(disp_path, disp_map)
+        cv2.imwrite(filtered_disp_path, filtered_disparity)
         cv2.imwrite(depth_path, depth_map)
 
-    return disp_map, depth_map
+    return disp_map, filtered_disparity, depth_map

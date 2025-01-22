@@ -36,7 +36,7 @@ def capture_stereo(output_path="images", camera_number=None, width=4416, height=
         cam_available = detect_camera()
 
         # Selecting stereo camera
-        camera_number = detect_stereo(cam_available)
+        _, camera_number = detect_stereo(cam_available)
 
     # date
     ct = datetime.datetime.now()
@@ -149,6 +149,8 @@ def detect_stereo(cam_available, stereo_res=(1242, 4416)):
     # Using the last value of the cam_available list because it has a potential to be stereo
     stereo_index = cam_available.pop()
 
+    stereo_retval = True
+
     cap = cv2.VideoCapture(stereo_index)
 
     # Creating resolution
@@ -162,11 +164,12 @@ def detect_stereo(cam_available, stereo_res=(1242, 4416)):
         print('\033[92m' + 'Stereo possible')
     else:
         print('\033[93m' + 'May not be stereo. Please check manually and use correct index!')
+        stereo_retval = False
 
     cap.release()
     cv2.destroyAllWindows()
 
-    return stereo_index
+    return stereo_retval, stereo_index
 
 def initialise_camera(cap):
     """Initialises the camera for five iterations to avoid missing data.
@@ -219,7 +222,7 @@ def record_stereo(output_path, camera_number, width, height):
         cam_available = detect_camera()
 
         # Selecting stereo camera
-        camera_number = detect_stereo(cam_available)
+        _, camera_number = detect_stereo(cam_available)
 
     # date 
     ct = datetime.datetime.now()
