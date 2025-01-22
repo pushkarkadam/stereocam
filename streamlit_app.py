@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import cv2
+import time
 from stereocam import *
 
 
@@ -16,6 +17,8 @@ baseline = 0.12 # 120 cm or 0.12 m
 num_disp_factor = 22
 window_size = 5
 min_disp = 300
+wls_lambda = 8000
+wls_sigma = 1.2
 
 
 # Detect all the possible cameras
@@ -59,14 +62,18 @@ with st.container():
             Adjust the parameters as needed.
             """)
 
-            num_disp_factor = st.slider("num_disp_factor", 1, 50, 1)
-            min_dip = st.slider("min_disp", 1, 500, 1)
-            window_size = st.slider("window_size", 5, 255, 3)
-            disp12MaxDiff = st.slider("disp12MaxDiff", 1, 10, 1)
-            preFilterCap = st.slider("preFilterCap", 0, 10, 1)
-            uniquenessRatio = st.slider("uniquenessRatio", 1, 10, 1)
-            speckleWindowSize = st.slider("speckleWindowSize", 0, 10, 1)
-            speckleRange = st.slider("speckleRange", 2, 10, 1)
+            num_disp_factor = st.slider("num_disp_factor", min_value=1, max_value=50, value=20, step=1)
+            min_dip = st.slider("min_disp", min_value=1, max_value=500, value=300, step=1)
+            window_size = st.slider("window_size", min_value=5, max_value=255, value=5, step=1)
+            disp12MaxDiff = st.slider("disp12MaxDiff", min_value=1, max_value=10, value=1, step=1)
+            preFilterCap = st.slider("preFilterCap", min_value=0, max_value=10, value=0, step=1)
+            uniquenessRatio = st.slider("uniquenessRatio", min_value=1, max_value=10, value=1, step=1)
+            speckleWindowSize = st.slider("speckleWindowSize", min_value=0, max_value=10, value=0, step=1)
+            speckleRange = st.slider("speckleRange", min_value=2, max_value=10, value=2, step=1)
+            wls_lambda = st.slider("wls_lambda", min_value=0, max_value=10000, value=8000, step=100)
+            wls_sigma = st.slider("wld_sigma", min_value=1.0, max_value=5.0, value=2.5, step=0.1)
+
+            map_type = st.selectbox("Map type", ["disp_map", "filtered_disp_map", "depth_map"])
 
             num_disp = 16 * num_disp_factor
 
@@ -76,10 +83,10 @@ with st.container():
                         "P1": 8*3*window_size**2,
                         "P2": 32*3*window_size**2,
                         "disp12MaxDiff": disp12MaxDiff,
-                        "preFilterCap": 0,
-                        "uniquenessRatio": 1,
-                        "speckleWindowSize": 0,
-                        "speckleRange": 2,
+                        "preFilterCap": preFilterCap,
+                        "uniquenessRatio": uniquenessRatio,
+                        "speckleWindowSize": speckleWindowSize,
+                        "speckleRange": speckleRange,
                         "mode": 0
                         }
     with col2:
@@ -105,28 +112,30 @@ with st.container():
 
                 left_rect, right_rect = rectify_stereo_image(left_frame, right_frame, data)
 
-                disp_map, depth_map = disparity_depth_map(
+                disp_map, filtered_disp_map, depth_map = disparity_depth_map(
                     left_img=left_rect,
                     right_img=right_rect,
                     baseline=baseline,
                     data=data,
                     algorithm="sgbm",
                     save_path=None,
+                    wls_lambda=wls_lambda,
+                    wls_sigma=wls_sigma,
                     **sgbm_params
                 )
-
+                
+                # Converting the image format for streamlit visualisation
                 disp_map = np.uint8(disp_map)
-
-
-                # Convert the frame from BGR to RGB format
-                # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                filtered_disp_map = np.uint8(filtered_disp_map)
 
                 # Display the frame using Streamlit's st.image
-                frame_placeholder.image(disp_map)
 
-                # Break the loop if the 'q' key is pressed or the user clicks the "Stop" button
-                # if cv2.waitKey(1) & 0xFF == ord("q") or stop_button_pressed: 
-                #     break
+                if map_type == "disp_map":
+                    frame_placeholder.image(disp_map, clamp=True)
+                elif map_type == "filtered_disp_map":
+                    frame_placeholder.image(filtered_disp_map, clamp=True)
+                else:
+                    frame_placeholder.image(depth_map, clamp=True)
 
 cap.release()
 cv2.destroyAllWindows()
