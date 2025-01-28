@@ -87,7 +87,7 @@ def disparity_depth_map(left_img,
     Returns
     -------
     tuple
-        A tuple of ``numpy.ndarray`` left and right rectified stereo image.
+        A tuple of ``numpy.ndarray`` disparity, filtered_disparity, and depth_map
     
     """
     if type(left_img) == str:
