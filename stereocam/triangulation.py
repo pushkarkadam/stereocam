@@ -73,6 +73,10 @@ def disparity_depth_map(left_img,
         A numpy image or file path to the image.
     data: dict
         A dictionary of camera parameters or a ``.npy`` file.
+    algorithm: str, default ``"bm"``
+        Algorithm to use.
+        According to opencv two algorithms ``"bm"`` and ``"sgbm"`` are provided.
+        ``**kwargs`` will rely on the input paramters that each of the algorithms select.
     save_path: str, default ``None``
         If path is given, then saves the rectified images to that path.
     wls_lambda: int, default ``8000``
