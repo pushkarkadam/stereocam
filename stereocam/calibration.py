@@ -206,7 +206,7 @@ def stereo_calibration(file_path, pattern_size, chess_box_size=30, save_path=Non
     
     Saves the camera matrix  as a dictionary and can be loaded using ``numpy.load()`` function.
     
-    Paramteres
+    Parameters
     ----------
     file_path: str
         Path to where the stereo images are stored.
