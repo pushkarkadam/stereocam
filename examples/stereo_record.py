@@ -23,5 +23,7 @@ if __name__ == '__main__':
         output_path=args.output_path, 
         camera_number=None, 
         width=int(args.width), 
-        height=int(args.height)
+        height=int(args.height),
+        fps=10,
+        save_images=True
         )
