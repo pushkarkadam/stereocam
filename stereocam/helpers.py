@@ -53,7 +53,10 @@ def clahe_filter(imageL, imageR, clipLimit=2.0, tileGridSize=(8,8)):
     imageR: str
         Image path or ``numpy.ndarray`` image matrix.
     
-    
+    Returns
+    -------
+    filtered_images: numpy.ndarray
+        Filtered image.
     """
     images = [imageL, imageR]
 
@@ -71,3 +74,26 @@ def clahe_filter(imageL, imageR, clipLimit=2.0, tileGridSize=(8,8)):
         filtered_images.append(image_filtered)
 
     return filtered_images
+
+def hsv2gray(image):
+    """Converts HSV image to grayscale image.
+    
+    Parameters
+    ----------
+    image: numpy.ndarray
+        Image in the BGR format.
+    
+    Returns
+    -------
+    gray: numpy.ndarray
+        Grayscale image.
+    
+    """
+    
+    # Converting HSV image to BGR
+    bgr = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+
+    # Converting BGR to Gray
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    
+    return gray
