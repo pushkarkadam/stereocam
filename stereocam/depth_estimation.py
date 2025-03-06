@@ -122,9 +122,9 @@ def depth_maps(imageL,
     Some paramters provided in this function are taken from opencv method for
     stereo disparity estimation using SGBM method.
 
-    Refer to the documentations::
+    Refer to the `OpenCV documentation`_
 
-        https://docs.opencv.org/4.x/d2/d85/classcv_1_1StereoSGBM.html
+    .. _OpenCV documentation: https://docs.opencv.org/4.x/d2/d85/classcv_1_1StereoSGBM.html
     
     Parameters
     ----------
