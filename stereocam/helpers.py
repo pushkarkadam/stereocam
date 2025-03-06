@@ -42,3 +42,32 @@ def colorspace_transform(imageL, imageR, colorspace=cv2.COLOR_BGR2HSV):
     rect_images = [cv2.cvtColor(image, colorspace) for image in images]
 
     return rect_images
+
+def clahe_filter(imageL, imageR, clipLimit=2.0, tileGridSize=(8,8)):
+    """Applying clahe filter.
+
+    Parameters
+    ----------
+    imageL: str
+        Image path or ``numpy.ndarray`` image matrix.
+    imageR: str
+        Image path or ``numpy.ndarray`` image matrix.
+    
+    
+    """
+    images = [imageL, imageR]
+
+    filtered_images = []
+
+    for image in images:
+        c1, c2, c3 = np.split(image, indices_or_sections=3, axis=2)
+        clahe = cv2.createCLAHE(clipLimit,  tileGridSize=tileGridSize)
+
+        # applying the filters
+        c1, c2, c3 = [clahe.apply(c) for c in [c1, c2, c3]]
+
+        image_filtered = np.stack((c1, c2, c3), axis=2)
+
+        filtered_images.append(image_filtered)
+
+    return filtered_images
