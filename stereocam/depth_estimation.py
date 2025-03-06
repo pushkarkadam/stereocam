@@ -158,3 +158,67 @@ def depth_maps(imageL,
     depth_map = camera_projection[:,:,-1]
 
     return disparity, camera_projection, depth_map
+
+def point_cloud(image,
+                depth_limits,
+                depth_map,
+                image_type='bgr',
+                save_path=None,
+                pcd_name="point_cloud.ply",
+                visualize=True
+               ):
+    """Generates and saves point cloud.
+    
+    Parameters
+    ----------
+    image: numpy.ndarray
+        Color image used. Ideally left image of the stereo camera.
+        The image should be of the camera whose coordinate frames are primary frame.
+    depth_limits: tuple
+        Limits of the depth to be bounded.
+    image_type: str, default ``bgr``
+        The channels of the image specified.
+    save_path, str, default ``None``
+        The path to save the point cloud.
+    pcd_name: str, default ``'point_cloud.ply'``
+        Name of the point cloud file.
+    visualize: bool, default ``True``
+        Visualizes the point cloud.
+
+    Returns
+    -------
+    open3d.cpu.pybind.geometry.PointCloud
+    
+    """
+
+    if image_type == 'bgr':
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # Normalize to [0, 1]
+    colors = image.reshape(-1, 3) / 255.0
+    points = depth_map.reshape(-1, 3)
+
+    colors = colors.astype(np.float32)
+    points = colors.astype(np.float32)
+
+    # lower and upper limit
+    lower_lim, upper_lim = depth_limits
+
+    # Creating a mask as per the depth limit set
+    valid_mask = (depth_map > lower_lim) & (depth_map < upper_lim)
+
+    valid_colors = colors[valid_mask.ravel()]
+    valid_points = points[valid_mask.ravel()]
+
+    # Open3D point cloud
+    pcd = o3d.geometry.PointCloud()
+    pcd.colors = o3d.utility.Vector3dVector(valid_colors)
+    pcd.points = o3d.utility.Vector3dVector(valid_points)
+
+    if save_path:
+        o3d.io.write_point_cloud(os.path.join(save_path, pcd_name), pcd)
+
+    if visualize:
+        o3d.visualization.draw_geometries([pcd])
+
+    return pcd
