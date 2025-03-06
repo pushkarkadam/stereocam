@@ -18,10 +18,18 @@ Capture Images
     :undoc-members:
     :show-inheritance:
 
-Triangulation
-^^^^^^^^^^^^^
+Depth Estimation
+^^^^^^^^^^^^^^^^
 
-.. automodule:: stereocam.triangulation
+.. automodule:: stereocam.depth_estimation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Helpers
+^^^^^^^
+
+.. automodule:: stereocam.helpers
     :members:
     :undoc-members:
     :show-inheritance:

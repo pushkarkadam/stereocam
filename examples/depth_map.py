@@ -1,24 +1,53 @@
 import sys 
+import time
+import cv2
 
 sys.path.append('../')
 from stereocam import *
 
 def main():
-    left, right = rectify_stereo_image(
-        left_img="../images/case2/stereo_left/imageL_14.png",
-        right_img="../images/case2/stereo_right/imageR_14.png",
-        data="../images/case2/stereo.npy"
-        )
-    
-    disp_map, depth_map = disparity_depth_map(
-        left_img=left,
-        right_img=right,
-        data="../images/case2/stereo.npy",
-        algorithm="sgbm",
-        baseline=0.12,
-        focal_length=1066,
-        save_path='images',
-    )
+    # Calibration data path
+    calib_path = "../images/case2/stereo_calib.npz"
+    imageL_path = "../images/exp_data_collection/weld_tab/stereo_left/images/0.png"
+    imageR_path = "../images/exp_data_collection/weld_tab/stereo_right/images/0.png"
+
+    # time calculation
+    start = time.time()
+
+    # loading calibration data
+    calib_data = load_calibration_data(calib_path)
+
+    # Reading images as BGR
+    imageL = cv2.imread(imageL_path)
+    imageR = cv2.imread(imageR_path)
+
+    # converting gray images
+    grayL, grayR = [cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) for image in [imageL, imageR]]
+
+    # Converting to HSV colorspace
+    imgL_hsv, imgR_hsv = colorspace_transform(imageL, imageR)
+
+    # filtering the images
+    imgL_fil, imgR_fil = clahe_filter(imgL_hsv, imgR_hsv)
+
+    # Stereo map generation
+    stereoMapL, stereoMapR = stereo_map(calib_data, image_shape=grayL.shape[::-1])
+
+    # Image rectification - hsv
+    rectL, rectR = rectify_images(imgL_fil, imgR_fil, stereoMapL, stereoMapR)
+
+    # image rectification - bgr
+    bgrRectL, bgrRectR = rectify_images(imageL, imageR, stereoMapL, stereoMapR)
+
+    # Depth maps generation
+    disparity, camera_projection, depth_map, left_cut = depth_maps(imageL=rectL, imageR=rectR, Q=calib_data['Q'])
+
+    end = time.time() - start
+
+    print(f"Time elapsed: {end} s")
+
+    # 3d point cloud data
+    pcd = point_cloud(bgrRectL, depth_limits=(0, 0.5), camera_projection=camera_projection, depth_map=depth_map, left_cut=left_cut, image_type='bgr')
 
 if __name__ == '__main__':
     main()

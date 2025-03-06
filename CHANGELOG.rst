@@ -14,12 +14,24 @@ and this project adheres to `Semantic Versioning`_.
 
 Added
 ^^^^^
-- Streamlit application added for SGBM tuning.
-- Weighted Least Square (WSL) filter added.
+- rectify images function added
+- point cloud function added
+- renamed triangulation to depth_estimation
+- depth_maps function added
+- hsv2gray conversion function added
+- clahe filter transformation added to helpers
+- colorspace transformation function added to helpers
+- created helpers file
+- rectification methods added
+- stereo_calibration function updated
+- requirements updated
+- fps and image saving added
 
-Changed
+
+Removed 
 ^^^^^^^
-- Detect stereo function returns stereo detection boolean flag along with camera number.
+- depth_map example code modified with new functions
+- legacy code removed
 
 
 [0.0.1] - 2025-01-13
