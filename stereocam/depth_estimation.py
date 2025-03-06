@@ -5,7 +5,7 @@ import os
 import open3d as o3d
 
 
-def stereo_map(calib_data, image_shape=(1080, 1920)):
+def stereo_map(calib_data, image_shape=(1920, 1080)):
     """Generates stereo maps.
     
     Parameters
@@ -14,7 +14,7 @@ def stereo_map(calib_data, image_shape=(1080, 1920)):
         Calibration data.
         This parameter can be either a ``str`` or ``dict``.
         If the parameter is ``str``, then it will be read using ``load_calibration_data`` function
-    image_shape: tuple, default ``(1080, 1920)``
+    image_shape: tuple, default ``(1920, 1080)``
         Shape of the image.
         Although the image shape can be manually added, it is wise to extract the shape from the image
         when implementing in the pipeline.
