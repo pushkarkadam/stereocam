@@ -53,6 +53,52 @@ def stereo_map(calib_data, image_shape=(1080, 1920)):
 
     return stereoMapL, stereoMapR
 
+def rectify_images(imageL, imageR, stereoMapL, stereoMapR, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0):
+    """Rectifies the images.
+
+    Parameters
+    ----------
+    imageL: str
+        Image path or ``numpy.ndarray`` image matrix.
+    imageR: str
+        Image path or ``numpy.ndarray`` image matrix.
+    stereoMapL: numpy.ndarray
+        Map for rectification of left image.
+    stereoMapR: numpy.ndarray
+        Map for rectificatrion of right image.
+    interpolation: int, default ``cv2.INTER_LINEAR``
+        Interpolation method for remapping.
+    borderMode: int, default ``cv2.BORDER_CONSTANT``
+        Boder mode for the image upon rectification.
+    borderValue: int, default ``0``
+        Border value.
+        When ``0``, the region will have zero values therefore black patches.
+        
+    
+    """
+    
+    if type(imageL) == str and type(imageR) == str:
+        imageL = cv2.imread(imageL)
+        imageR = cv2.imread(imageR)
+
+    rectL = cv2.remap(src=imageL, 
+                      map1=stereoMapL[0],
+                      map2=stereoMapL[1],
+                      interpolation=interpolation,
+                      borderMode=borderMode,
+                      borderValue=borderValue
+                     )
+    
+    rectR = cv2.remap(src=imageR,
+                      map1=stereoMapR[0],
+                      map2=stereoMapR[1],
+                      interpolation=interpolation,
+                      borderMode=borderMode,
+                      borderValue=borderValue
+                     )
+
+    return rectL, rectR
+
 def depth_maps(imageL, 
                imageR, 
                Q,
@@ -188,7 +234,7 @@ def point_cloud(image,
     Returns
     -------
     open3d.cpu.pybind.geometry.PointCloud
-    
+
     """
 
     if image_type == 'bgr':
