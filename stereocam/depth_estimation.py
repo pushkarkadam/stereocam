@@ -3,6 +3,10 @@ import cv2
 import glob
 import os
 import open3d as o3d
+import sys 
+
+sys.path.append('../')
+from stereocam.helpers import hsv2gray
 
 
 def stereo_map(calib_data, image_shape=(1920, 1080)):
