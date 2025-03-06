@@ -5,18 +5,6 @@ import os
 import open3d as o3d
 
 
-def load_calibration_data(calib_file_path):
-    """Loads calibration data.
-    
-    Parameters
-    ----------
-    calib_file_path: str
-        Path where the calibration data is stored
-    
-    """
-
-    return np.load(calib_file_path)
-
 def stereo_map(calib_data, image_shape=(1080, 1920)):
     """Generates stereo maps.
     
@@ -64,3 +52,4 @@ def stereo_map(calib_data, image_shape=(1080, 1920)):
                                              m1type=cv2.CV_16SC2)
 
     return stereoMapL, stereoMapR
+
