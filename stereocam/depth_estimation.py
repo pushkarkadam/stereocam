@@ -166,6 +166,8 @@ def depth_maps(imageL,
         coordinates with respect to the left camera frame.
     depth_map: numpy.ndarray
         A matrix that shows depth value of each pixel in left camera frame.
+    left_cut: int
+        The number of rows that will be elimated using ``minDisparity + 16 * dispFactor``
 
     """
     stereo_images = [imageL, imageR]
@@ -207,11 +209,20 @@ def depth_maps(imageL,
     # Extracting last channel of the camera projection which is the z axis for depth
     depth_map = camera_projection[:,:,-1]
 
-    return disparity, camera_projection, depth_map
+    # Elimating the blank area on the left side
+    left_cut = minDisparity + 16 * dispFactor
+
+    disparity = disparity[:, left_cut:]
+    camera_projection = camera_projection[:, left_cut:, :]
+    depth_map = depth_map[:, left_cut:]
+
+    return disparity, camera_projection, depth_map, left_cut
 
 def point_cloud(image,
                 depth_limits,
+                camera_projection,
                 depth_map,
+                left_cut,
                 image_type='bgr',
                 save_path=None,
                 pcd_name="point_cloud.ply",
@@ -226,6 +237,11 @@ def point_cloud(image,
         The image should be of the camera whose coordinate frames are primary frame.
     depth_limits: tuple
         Limits of the depth to be bounded.
+    camera_projection: numpy.ndarray
+        A 3D tensor where each channel consists information about the x, y, and z
+        coordinates with respect to the left camera frame.
+    depth_map: numpy.ndarray
+        A matrix that shows depth value of each pixel in left camera frame.
     image_type: str, default ``bgr``
         The channels of the image specified.
     save_path, str, default ``None``
@@ -244,12 +260,14 @@ def point_cloud(image,
     if image_type == 'bgr':
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
+    image = image[:, left_cut:, :]
+
     # Normalize to [0, 1]
     colors = image.reshape(-1, 3) / 255.0
-    points = depth_map.reshape(-1, 3)
+    points = camera_projection.reshape(-1, 3)
 
     colors = colors.astype(np.float32)
-    points = colors.astype(np.float32)
+    points = points.astype(np.float32)
 
     # lower and upper limit
     lower_lim, upper_lim = depth_limits
