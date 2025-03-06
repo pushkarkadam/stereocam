@@ -17,7 +17,7 @@ Kl, Dl, Kr, Dr, R, T, img_size = data['Kl'], data['Dl'], data['Kr'], data['Dr'],
 
 
 # PARAMS
-baseline = 0.12 # 120 cm or 0.12 m
+baseline = 0.12 # 12 cm or 0.12 m
 num_disp_factor = 22
 window_size = 5
 min_disp = 300

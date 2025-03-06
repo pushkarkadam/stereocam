@@ -6,3 +6,4 @@ tqdm
 sphinx
 streamlit
 plotly
+open3d
