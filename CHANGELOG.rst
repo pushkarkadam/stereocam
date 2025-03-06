@@ -9,29 +9,27 @@ and this project adheres to `Semantic Versioning`_.
 .. _Keep a Changelog: https://keepachangelog.com/en/1.0.0/
 .. _Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
-[Unreleased]
-------------
+[0.0.2] - 2025-03-06
+--------------------
 
 Added
 ^^^^^
-- rectify images function added
-- point cloud function added
-- renamed triangulation to depth_estimation
-- depth_maps function added
-- hsv2gray conversion function added
-- clahe filter transformation added to helpers
-- colorspace transformation function added to helpers
-- created helpers file
-- rectification methods added
-- stereo_calibration function updated
-- requirements updated
-- fps and image saving added
-
+- Rectify images function added.
+- Point cloud function added.
+- Renamed triangulation to depth_estimation.
+- Depth_maps function added.
+- ``hsv2gray`` conversion function added.
+- Clahe filter transformation added to helpers.
+- Colorspace transformation function added to helpers.
+- Created helpers file.
+- Rectification methods added.
+- ``stereo_calibration`` function updated.
+- Requirements updated.
+- fps and image saving added.
 
 Removed 
 ^^^^^^^
-- depth_map example code modified with new functions
-- legacy code removed
+- ``depth_map`` example code modified with new functions.
 
 
 [0.0.1] - 2025-01-13
