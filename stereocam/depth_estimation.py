@@ -291,3 +291,36 @@ def point_cloud(image,
         o3d.visualization.draw_geometries([pcd, axis])
 
     return pcd
+
+def pick_points(pcd):
+    r"""Provides the coordinate information by clicking on the points.
+    The output will be printed in the terminal window when the points are clicked.
+    The return list will three points that will provide the index of the point
+    if the ``depth_map`` matrix  was flatten such as ``depth_map.ravel()``.
+
+    Use the following procedure when selecting the point:
+
+    - Please pick at least three correspondences using [shift + left click]
+    - Press [shift + right click] to undo point picking
+    - After picking points, press 'Q' to close the window
+
+    Parameters
+    ----------
+    pcd: open3d.cpu.pybind.geometry.PointCloud
+        Point cloud data
+    
+    """
+    print("")
+    print(
+        "1) Please pick at least three correspondences using [shift + left click]"
+    )
+    print("   Press [shift + right click] to undo point picking")
+    print("2) After picking points, press 'Q' to close the window")
+    vis = o3d.visualization.VisualizerWithEditing()
+    vis.create_window()
+    vis.add_geometry(pcd)
+    
+    vis.run()  # user picks points
+    vis.destroy_window()
+    print("")
+    return vis.get_picked_points()
