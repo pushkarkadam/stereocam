@@ -287,6 +287,7 @@ def point_cloud(image,
         o3d.io.write_point_cloud(os.path.join(save_path, pcd_name), pcd)
 
     if visualize:
-        o3d.visualization.draw_geometries([pcd])
+        axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05, origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([pcd, axis])
 
     return pcd
