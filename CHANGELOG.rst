@@ -9,6 +9,15 @@ and this project adheres to `Semantic Versioning`_.
 .. _Keep a Changelog: https://keepachangelog.com/en/1.0.0/
 .. _Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+[Unreleased]
+------------
+
+Added
+^^^^^
+- Determine minimum Disparity my approximate distance function added.
+- Pick point from point cloud to display (x,y,x) values in terminal added.
+- Origin axis frame added to pointcloud visualisation.
+
 [0.0.2] - 2025-03-06
 --------------------
 

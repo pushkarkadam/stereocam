@@ -324,3 +324,40 @@ def pick_points(pcd):
     vis.destroy_window()
     print("")
     return vis.get_picked_points()
+
+def approximate_min_disparity(approx_distance, Q):
+    """Estimates the approximate minimum disparity value.
+
+    This method is useful when a distance can be estimated for the object.
+    This is performed when setting up the camera system.
+    
+    Parameters
+    ----------
+    approx_distance: float
+        Approximate distance of the object of interest observed.
+    Q: numpy.ndarray
+        Reprojection matrix.
+
+    Returns
+    -------
+    disp_value: float
+        Disparity value computed from the reprojection matrix.
+        
+    """
+    
+    # Creating a vector of size 4 x 1 
+    x_vec = np.array([1,1,approx_distance, 1])
+
+    # Calculating inverse of reprojection matrix Q
+    Qinv = np.linalg.inv(Q)
+
+    # Multiplying Q_inv and x_vec to get homogeneous coordinate
+    xh = np.dot(Qinv, x_vec)
+
+    # Dividing the homogenous scaling factor
+    x = (xh / xh[-1])[:-1]
+
+    # extracting the disparity value from the x vector
+    disp_value = x[-1]
+
+    return disp_value
