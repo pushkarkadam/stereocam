@@ -97,3 +97,29 @@ def hsv2gray(image):
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     
     return gray
+
+def load_stereo_params(file_path):
+    """Loads variables from a YAML file.
+    
+    Parameters
+    ----------
+    file_path: str
+        The path where the ``.yaml`` file is stored.
+
+    Returns
+    -------
+    dict
+
+    Examples
+    --------
+    >>> stereo_params = load_stereo_params('config.yaml')
+
+    """
+    try:
+        with open(file_path, 'r') as file:
+            stereo_params = yaml.safe_load(file)
+    except Exception as e:
+        print(e)
+        raise
+
+    return stereo_params
