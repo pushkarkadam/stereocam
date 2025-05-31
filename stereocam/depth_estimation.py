@@ -106,6 +106,7 @@ def rectify_images(imageL, imageR, stereoMapL, stereoMapR, interpolation=cv2.INT
 def depth_maps(imageL, 
                imageR, 
                Q,
+               image_type='hsv',
                dispFactor=1, 
                blockSize=5, 
                minDisparity=500,
@@ -114,8 +115,7 @@ def depth_maps(imageL,
                uniquenessRatio=0,
                speckleWindowSize=100, # range 50-200
                speckleRange=2, # range 1 or 2
-               mode = 0,
-               image_type='hsv'
+               mode = 0
               ):
     """Disparity map generation.
 
