@@ -40,7 +40,7 @@ def capture_stereo(output_path="images", camera_number=None, width=4416, height=
 
     # date
     ct = datetime.datetime.now()
-    date = ct.strftime("%d-%m-%Y-%H-%M")
+    data = ct.strftime("%Y-%m-%d-%H-%M")
 
     # Make directory for saving both left and right images
     path_left = os.path.join(output_path, date, 'stereo_left')
