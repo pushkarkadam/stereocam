@@ -17,6 +17,7 @@ Added
 - Determine minimum Disparity my approximate distance function added.
 - Pick point from point cloud to display (x,y,x) values in terminal added.
 - Origin axis frame added to pointcloud visualisation.
+- Live calibration function added.
 
 [0.0.2] - 2025-03-06
 --------------------
