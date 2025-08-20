@@ -1,6 +1,7 @@
 # Files to ignore
 images/
 notebooks/
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

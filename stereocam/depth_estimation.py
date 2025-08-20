@@ -115,7 +115,8 @@ def depth_maps(imageL,
                uniquenessRatio=0,
                speckleWindowSize=100, # range 50-200
                speckleRange=2, # range 1 or 2
-               mode = 0
+               mode = 0,
+               remove_stereo_blank=True
               ):
     """Disparity map generation.
 
@@ -156,6 +157,8 @@ def depth_maps(imageL,
         The method used to compute.
     image_type: str, default ``'hsv'``
         Image type as the input to use correct conversion to gray scale.
+    remove_stereo_blank: bool, default ``True``
+        Removes the area where there is no stereo matching available.
     
     Returns
     -------
@@ -212,9 +215,10 @@ def depth_maps(imageL,
     # Elimating the blank area on the left side
     left_cut = minDisparity + 16 * dispFactor
 
-    disparity = disparity[:, left_cut:]
-    camera_projection = camera_projection[:, left_cut:, :]
-    depth_map = depth_map[:, left_cut:]
+    if remove_stereo_blank:
+        disparity = disparity[:, left_cut:]
+        camera_projection = camera_projection[:, left_cut:, :]
+        depth_map = depth_map[:, left_cut:]
 
     return disparity, camera_projection, depth_map, left_cut
 
@@ -226,7 +230,9 @@ def point_cloud(image,
                 image_type='bgr',
                 save_path=None,
                 pcd_name="point_cloud.ply",
-                visualize=True
+                visualize=True,
+                cloud_frame=True,
+                cloud_frame_size=0.5
                ):
     """Generates and saves point cloud.
     
@@ -250,6 +256,10 @@ def point_cloud(image,
         Name of the point cloud file.
     visualize: bool, default ``True``
         Visualizes the point cloud.
+    cloud_frame: bool, default ``True``
+        Visualise the camera frame.
+    cloud_frame_size: float, default ``0.5``
+        Camera frame size in point cloud visualisation.
 
     Returns
     -------
@@ -286,9 +296,13 @@ def point_cloud(image,
     if save_path:
         o3d.io.write_point_cloud(os.path.join(save_path, pcd_name), pcd)
 
+    vis_data = [pcd]
+
     if visualize:
-        axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05, origin=[0, 0, 0])
-        o3d.visualization.draw_geometries([pcd, axis])
+        if cloud_frame:
+            axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cloud_frame_size, origin=[0, 0, 0])
+            vis_data.append(axis)
+        o3d.visualization.draw_geometries(vis_data)
 
     return pcd
 
