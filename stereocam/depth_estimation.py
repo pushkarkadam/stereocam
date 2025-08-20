@@ -115,7 +115,8 @@ def depth_maps(imageL,
                uniquenessRatio=0,
                speckleWindowSize=100, # range 50-200
                speckleRange=2, # range 1 or 2
-               mode = 0
+               mode = 0,
+               remove_stereo_blank=True
               ):
     """Disparity map generation.
 
@@ -156,6 +157,8 @@ def depth_maps(imageL,
         The method used to compute.
     image_type: str, default ``'hsv'``
         Image type as the input to use correct conversion to gray scale.
+    remove_stereo_blank: bool, default ``True``
+        Removes the area where there is no stereo matching available.
     
     Returns
     -------
@@ -212,9 +215,10 @@ def depth_maps(imageL,
     # Elimating the blank area on the left side
     left_cut = minDisparity + 16 * dispFactor
 
-    disparity = disparity[:, left_cut:]
-    camera_projection = camera_projection[:, left_cut:, :]
-    depth_map = depth_map[:, left_cut:]
+    if remove_stereo_blank:
+        disparity = disparity[:, left_cut:]
+        camera_projection = camera_projection[:, left_cut:, :]
+        depth_map = depth_map[:, left_cut:]
 
     return disparity, camera_projection, depth_map, left_cut
 
