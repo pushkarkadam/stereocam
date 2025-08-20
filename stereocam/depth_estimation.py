@@ -226,7 +226,9 @@ def point_cloud(image,
                 image_type='bgr',
                 save_path=None,
                 pcd_name="point_cloud.ply",
-                visualize=True
+                visualize=True,
+                cloud_frame=True,
+                cloud_frame_size=0.5
                ):
     """Generates and saves point cloud.
     
@@ -250,6 +252,10 @@ def point_cloud(image,
         Name of the point cloud file.
     visualize: bool, default ``True``
         Visualizes the point cloud.
+    cloud_frame: bool, default ``True``
+        Visualise the camera frame.
+    cloud_frame_size: float, default ``0.5``
+        Camera frame size in point cloud visualisation.
 
     Returns
     -------
@@ -286,9 +292,13 @@ def point_cloud(image,
     if save_path:
         o3d.io.write_point_cloud(os.path.join(save_path, pcd_name), pcd)
 
+    vis_data = [pcd]
+
     if visualize:
-        axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05, origin=[0, 0, 0])
-        o3d.visualization.draw_geometries([pcd, axis])
+        if cloud_frame:
+            axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cloud_frame_size, origin=[0, 0, 0])
+            vis_data.append(axis)
+        o3d.visualization.draw_geometries(vis_data)
 
     return pcd
 
