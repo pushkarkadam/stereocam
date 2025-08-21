@@ -163,6 +163,3 @@ def rectify_points(x, y, K, D, R, P):
     y_rect = points_rect[:, 1].astype(np.int32)
     
     return x_rect, y_rect
-
-
-x_rect, y_rect = rectify_points(x, y, mtxL, distL, R=R1, P=P1)
