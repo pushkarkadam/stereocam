@@ -321,3 +321,35 @@ def split_stereo(frame):
     right_frame = frame[:, width // 2:, :]
 
     return left_frame, right_frame
+
+def detect_stereo_camera(camera_name="zed"):
+    """Detects stereo camera.
+    
+    Parameters
+    ----------
+    camera_name: str, default ``"zed"``
+        Name of the camera to be used as keyword.
+
+    Returns
+    -------
+    int:
+        Index of the camera. If the camera is not found as per the ``camera_name``
+        then ``None`` is returned.
+        
+    """
+    context = pyudev.Context()
+
+    devices = context.list_devices(subsystem='video4linux')
+    
+    for device in devices:
+        parent = device.find_parent('usb', 'usb_device')
+        if parent.properties:
+            print(f'Found USB parent: {parent}')
+            if camera_name.lower() in str(parent).lower():
+                print(f'Found device: {device.device_node}')
+
+                # Extracting the camera index
+                cam_match = re.search(r'/dev/video(\d+)', device.device_node)
+                if cam_match:
+                    return int(cam_match.group(1))
+    return None
