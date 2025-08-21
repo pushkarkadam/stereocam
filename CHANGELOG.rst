@@ -19,6 +19,7 @@ Added
 - Origin axis frame added to pointcloud visualisation.
 - Live calibration function added.
 - Example file added for live calibration.
+- Added stereo camera detection by name function.
 
 [0.0.2] - 2025-03-06
 --------------------
