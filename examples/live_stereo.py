@@ -134,7 +134,6 @@ if __name__ == '__main__':
                     depth_limits=(0,10), 
                     camera_projection=camera_projection, 
                     depth_map=depth_map,
-                    # image_type="bgr",
                     left_cut=left_cut, 
                     save_path='.', 
                     pcd_name=os.path.join(calib_save_path, f'pointcloud_{timestamp}.ply'))

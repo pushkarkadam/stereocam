@@ -375,3 +375,98 @@ def approximate_min_disparity(approx_distance, Q):
     disp_value = x[-1]
 
     return disp_value
+
+def rectify_points(x, y, K, D, R, P):
+    """Rectifies the points from the raw image plane to the rectified image plane.
+    
+    Paramters
+    ---------
+    x: numpy.ndarray
+        An array of x coordinates.
+    y: numpy.ndarray
+        An array of y coordinates.
+    K: numpy.ndarray
+        Camera matrix.
+    D: numpy.ndarray
+        Distortion matrix
+    R: numpy.ndarray
+        Rotational matrix.
+    P: numpy.ndarray
+        Translation vector
+
+    Returns
+    -------
+    x_rect: numpy.ndarray
+        Rectified array of x coordinates.
+    y_rect: numpy.ndarray
+        Rectified array of y coordinates.
+
+    """
+
+    assert x.shape == y.shape
+    
+    points = np.column_stack([x, y]).reshape(-1, 1, 2).astype(np.float32)
+    points_rect = cv2.undistortPoints(points, K, D, R=R, P=P)
+
+    points_rect = points_rect.reshape(-1, 2)
+
+    x_rect = points_rect[:, 0].astype(np.int32)
+    y_rect = points_rect[:, 1].astype(np.int32)
+    
+    return x_rect, y_rect
+
+def image_points_to_camera(x_rect, y_rect, left_cut, disparity, max_depth=1):
+    """Projects the image plane points that are rectified to the points in
+    camera frame.
+    
+    Parameters
+    ----------
+    x_rect: numpy.ndarray
+        An array of rectified x coordinates.
+    y_rect: numpy.ndarray
+        An array of rectified y coordinates.
+    left_cut: int
+        Value where the disparity image is cut with the blank area.
+    disparity: numpy.ndarray
+        Disparity map.
+    max_depth: int, default ``1``
+        Maximum depth for visualisation.
+    
+    Returns
+    -------
+    points3d: numpy.ndarray
+        A point3d array where the image coordinates are projected into camera coordinates.
+    """
+
+    image_points = [(xi - left_cut, yi) for xi, yi, in zip(x_rect, y_rect)]
+    
+    disp_points = [disparity[i] for i in image_points]
+
+    object_points = [np.array([c[0] + left_cut, c[1], d, 1]) for c, d in zip(image_point, disp_points)]
+
+    object_3d = [np.matmul(Q, p) for p in object_points]
+
+    object_3d = [op/op[-1] for op in object_3d]
+
+    # filtering points to exclude those beyond estimated depths
+    filtered_points3d = [i for i in object_3d if i[-2] < max_depth]
+
+    points3d = np.array([o[:-1].tolist() for o in filtered_points3d])
+
+    return points3d
+
+def visualise_points(pcd, points3d, color=[1, 0, 0]):
+    """Visualises the given set of points in point clouds.
+    
+    Parameters
+    ----------
+    pcd: open3d.cpu.pybind.geometry.PointCloud
+        Point cloud data
+    points3d: ndarray
+        An array of size ``
+    """ 
+
+    points_to_add = o3d.geometry.PointCloud()
+    points_to_add.points = o3d.utility.Vector3dVector(points3d)
+    points_to_add.paint_uniform_color(color)
+    o3d.visualization.draw_geometries([points_to_add, pcd])
