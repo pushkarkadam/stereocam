@@ -415,7 +415,7 @@ def rectify_points(x, y, K, D, R, P):
     
     return x_rect, y_rect
 
-def image_points_to_camera(x_rect, y_rect, left_cut, disparity, max_depth=1):
+def image_points_to_camera(x_rect, y_rect, left_cut, disparity, Q, max_depth=1):
     """Projects the image plane points that are rectified to the points in
     camera frame.
     
@@ -429,6 +429,8 @@ def image_points_to_camera(x_rect, y_rect, left_cut, disparity, max_depth=1):
         Value where the disparity image is cut with the blank area.
     disparity: numpy.ndarray
         Disparity map.
+    Q: numpy.ndarray
+        Projection matrix.
     max_depth: int, default ``1``
         Maximum depth for visualisation.
     
@@ -442,7 +444,7 @@ def image_points_to_camera(x_rect, y_rect, left_cut, disparity, max_depth=1):
     
     disp_points = [disparity[i] for i in image_points]
 
-    object_points = [np.array([c[0] + left_cut, c[1], d, 1]) for c, d in zip(image_point, disp_points)]
+    object_points = [np.array([c[0] + left_cut, c[1], d, 1]) for c, d in zip(image_points, disp_points)]
 
     object_3d = [np.matmul(Q, p) for p in object_points]
 
