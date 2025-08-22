@@ -2,6 +2,8 @@ import cv2
 import argparse
 import datetime
 import os
+import pyudev
+import re
 
 
 def capture_stereo(output_path="images", camera_number=None, width=4416, height=1242):
