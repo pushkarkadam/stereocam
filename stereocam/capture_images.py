@@ -344,10 +344,8 @@ def detect_stereo_camera(camera_name="zed"):
     for device in devices:
         parent = device.find_parent('usb', 'usb_device')
         if parent.properties:
-            print(f'Found USB parent: {parent}')
-            if camera_name.lower() in str(parent).lower():
-                print(f'Found device: {device.device_node}')
-
+            model = parent.get('ID_MODEL', '')
+            if camera_name.lower() in str(model).lower():
                 # Extracting the camera index
                 cam_match = re.search(r'/dev/video(\d+)', device.device_node)
                 if cam_match:
