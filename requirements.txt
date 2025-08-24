@@ -7,3 +7,4 @@ sphinx
 streamlit
 plotly
 open3d
+pyudev

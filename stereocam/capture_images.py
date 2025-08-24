@@ -2,6 +2,8 @@ import cv2
 import argparse
 import datetime
 import os
+import pyudev
+import re
 
 
 def capture_stereo(output_path="images", camera_number=None, width=4416, height=1242):
@@ -40,7 +42,7 @@ def capture_stereo(output_path="images", camera_number=None, width=4416, height=
 
     # date
     ct = datetime.datetime.now()
-    date = ct.strftime("%d-%m-%Y-%H-%M")
+    data = ct.strftime("%Y-%m-%d-%H-%M")
 
     # Make directory for saving both left and right images
     path_left = os.path.join(output_path, date, 'stereo_left')
@@ -321,3 +323,33 @@ def split_stereo(frame):
     right_frame = frame[:, width // 2:, :]
 
     return left_frame, right_frame
+
+def detect_stereo_camera(camera_name="zed"):
+    """Detects stereo camera.
+    
+    Parameters
+    ----------
+    camera_name: str, default ``"zed"``
+        Name of the camera to be used as keyword.
+
+    Returns
+    -------
+    int:
+        Index of the camera. If the camera is not found as per the ``camera_name``
+        then ``None`` is returned.
+        
+    """
+    context = pyudev.Context()
+
+    devices = context.list_devices(subsystem='video4linux')
+    
+    for device in devices:
+        parent = device.find_parent('usb', 'usb_device')
+        if parent.properties:
+            model = parent.get('ID_MODEL', '')
+            if camera_name.lower() in str(model).lower():
+                # Extracting the camera index
+                cam_match = re.search(r'/dev/video(\d+)', device.device_node)
+                if cam_match:
+                    return int(cam_match.group(1))
+    return None

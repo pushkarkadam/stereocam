@@ -106,6 +106,7 @@ def rectify_images(imageL, imageR, stereoMapL, stereoMapR, interpolation=cv2.INT
 def depth_maps(imageL, 
                imageR, 
                Q,
+               image_type='hsv',
                dispFactor=1, 
                blockSize=5, 
                minDisparity=500,
@@ -115,7 +116,7 @@ def depth_maps(imageL,
                speckleWindowSize=100, # range 50-200
                speckleRange=2, # range 1 or 2
                mode = 0,
-               image_type='hsv'
+               remove_stereo_blank=True
               ):
     """Disparity map generation.
 
@@ -156,6 +157,8 @@ def depth_maps(imageL,
         The method used to compute.
     image_type: str, default ``'hsv'``
         Image type as the input to use correct conversion to gray scale.
+    remove_stereo_blank: bool, default ``True``
+        Removes the area where there is no stereo matching available.
     
     Returns
     -------
@@ -212,9 +215,10 @@ def depth_maps(imageL,
     # Elimating the blank area on the left side
     left_cut = minDisparity + 16 * dispFactor
 
-    disparity = disparity[:, left_cut:]
-    camera_projection = camera_projection[:, left_cut:, :]
-    depth_map = depth_map[:, left_cut:]
+    if remove_stereo_blank:
+        disparity = disparity[:, left_cut:]
+        camera_projection = camera_projection[:, left_cut:, :]
+        depth_map = depth_map[:, left_cut:]
 
     return disparity, camera_projection, depth_map, left_cut
 
@@ -226,7 +230,9 @@ def point_cloud(image,
                 image_type='bgr',
                 save_path=None,
                 pcd_name="point_cloud.ply",
-                visualize=True
+                visualize=True,
+                cloud_frame=True,
+                cloud_frame_size=0.5
                ):
     """Generates and saves point cloud.
     
@@ -250,6 +256,10 @@ def point_cloud(image,
         Name of the point cloud file.
     visualize: bool, default ``True``
         Visualizes the point cloud.
+    cloud_frame: bool, default ``True``
+        Visualise the camera frame.
+    cloud_frame_size: float, default ``0.5``
+        Camera frame size in point cloud visualisation.
 
     Returns
     -------
@@ -286,7 +296,179 @@ def point_cloud(image,
     if save_path:
         o3d.io.write_point_cloud(os.path.join(save_path, pcd_name), pcd)
 
+    vis_data = [pcd]
+
     if visualize:
-        o3d.visualization.draw_geometries([pcd])
+        if cloud_frame:
+            axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cloud_frame_size, origin=[0, 0, 0])
+            vis_data.append(axis)
+        o3d.visualization.draw_geometries(vis_data)
 
     return pcd
+
+def pick_points(pcd):
+    r"""Provides the coordinate information by clicking on the points.
+    The output will be printed in the terminal window when the points are clicked.
+    The return list will three points that will provide the index of the point
+    if the ``depth_map`` matrix  was flatten such as ``depth_map.ravel()``.
+
+    Use the following procedure when selecting the point:
+
+    - Please pick at least three correspondences using [shift + left click]
+    - Press [shift + right click] to undo point picking
+    - After picking points, press 'Q' to close the window
+
+    Parameters
+    ----------
+    pcd: open3d.cpu.pybind.geometry.PointCloud
+        Point cloud data
+    
+    """
+    print("")
+    print(
+        "1) Please pick at least three correspondences using [shift + left click]"
+    )
+    print("   Press [shift + right click] to undo point picking")
+    print("2) After picking points, press 'Q' to close the window")
+    vis = o3d.visualization.VisualizerWithEditing()
+    vis.create_window()
+    vis.add_geometry(pcd)
+    
+    vis.run()  # user picks points
+    vis.destroy_window()
+    print("")
+    return vis.get_picked_points()
+
+def approximate_min_disparity(approx_distance, Q):
+    """Estimates the approximate minimum disparity value.
+
+    This method is useful when a distance can be estimated for the object.
+    This is performed when setting up the camera system.
+    
+    Parameters
+    ----------
+    approx_distance: float
+        Approximate distance of the object of interest observed.
+    Q: numpy.ndarray
+        Reprojection matrix.
+
+    Returns
+    -------
+    disp_value: float
+        Disparity value computed from the reprojection matrix.
+        
+    """
+    
+    # Creating a vector of size 4 x 1 
+    x_vec = np.array([1,1,approx_distance, 1])
+
+    # Calculating inverse of reprojection matrix Q
+    Qinv = np.linalg.inv(Q)
+
+    # Multiplying Q_inv and x_vec to get homogeneous coordinate
+    xh = np.dot(Qinv, x_vec)
+
+    # Dividing the homogenous scaling factor
+    x = (xh / xh[-1])[:-1]
+
+    # extracting the disparity value from the x vector
+    disp_value = x[-1]
+
+    return disp_value
+
+def rectify_points(x, y, K, D, R, P):
+    """Rectifies the points from the raw image plane to the rectified image plane.
+    
+    Paramters
+    ---------
+    x: numpy.ndarray
+        An array of x coordinates.
+    y: numpy.ndarray
+        An array of y coordinates.
+    K: numpy.ndarray
+        Camera matrix.
+    D: numpy.ndarray
+        Distortion matrix
+    R: numpy.ndarray
+        Rotational matrix.
+    P: numpy.ndarray
+        Translation vector
+
+    Returns
+    -------
+    x_rect: numpy.ndarray
+        Rectified array of x coordinates.
+    y_rect: numpy.ndarray
+        Rectified array of y coordinates.
+
+    """
+
+    assert x.shape == y.shape
+    
+    points = np.column_stack([x, y]).reshape(-1, 1, 2).astype(np.float32)
+    points_rect = cv2.undistortPoints(points, K, D, R=R, P=P)
+
+    points_rect = points_rect.reshape(-1, 2)
+
+    x_rect = points_rect[:, 0].astype(np.int32)
+    y_rect = points_rect[:, 1].astype(np.int32)
+    
+    return x_rect, y_rect
+
+def image_points_to_camera(x_rect, y_rect, left_cut, disparity, Q, max_depth=1):
+    """Projects the image plane points that are rectified to the points in
+    camera frame.
+    
+    Parameters
+    ----------
+    x_rect: numpy.ndarray
+        An array of rectified x coordinates.
+    y_rect: numpy.ndarray
+        An array of rectified y coordinates.
+    left_cut: int
+        Value where the disparity image is cut with the blank area.
+    disparity: numpy.ndarray
+        Disparity map.
+    Q: numpy.ndarray
+        Projection matrix.
+    max_depth: int, default ``1``
+        Maximum depth for visualisation.
+    
+    Returns
+    -------
+    points3d: numpy.ndarray
+        A point3d array where the image coordinates are projected into camera coordinates.
+    """
+
+    image_points = [(xi - left_cut, yi) for xi, yi, in zip(x_rect, y_rect)]
+    
+    disp_points = [disparity[i] for i in image_points]
+
+    object_points = [np.array([c[0] + left_cut, c[1], d, 1]) for c, d in zip(image_points, disp_points)]
+
+    object_3d = [np.matmul(Q, p) for p in object_points]
+
+    object_3d = [op/op[-1] for op in object_3d]
+
+    # filtering points to exclude those beyond estimated depths
+    filtered_points3d = [i for i in object_3d if i[-2] < max_depth]
+
+    points3d = np.array([o[:-1].tolist() for o in filtered_points3d])
+
+    return points3d
+
+def visualise_points(pcd, points3d, color=[1, 0, 0]):
+    """Visualises the given set of points in point clouds.
+    
+    Parameters
+    ----------
+    pcd: open3d.cpu.pybind.geometry.PointCloud
+        Point cloud data
+    points3d: ndarray
+        An array of size ``
+    """ 
+
+    points_to_add = o3d.geometry.PointCloud()
+    points_to_add.points = o3d.utility.Vector3dVector(points3d)
+    points_to_add.paint_uniform_color(color)
+    o3d.visualization.draw_geometries([points_to_add, pcd])

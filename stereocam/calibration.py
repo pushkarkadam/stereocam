@@ -368,3 +368,237 @@ def stereo_calibration(file_path,
     np.savez(save_path, mtxL=mtxL, distL=distL, mtxR=mtxR, distR=distR, R=R, T=T, R1=R1, R2=R2, P1=P1, P2=P2, Q=Q)
         
     return retval
+
+def stereo_live_calibration(cam, 
+                       chessboard_size,
+                       view_scaling_factor=1,
+                       frame_size=(672, 376),
+                       save_path='',
+                       square_size=0.039,
+                       chessboard_flag=cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE,
+                       cornerSubPix_winSize=(11,11),
+                       cornerSubPix_zeroZone=(-1,-1),
+                       cornerSubPix_criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001),
+                       calibrateCamera_flags=cv2.CALIB_ZERO_TANGENT_DIST,
+                       stereoCalibrate_flags=cv2.CALIB_FIX_INTRINSIC,
+                       param_save_path=None,
+                       image_limit=20,
+                       save_rendered=None
+                      ):
+    """Calibrates stereo camera.
+
+    For high quality result, use at least 10 images of a ``7 x 8`` or larger chessboard.
+    
+    Parameters
+    ----------
+    cam: int
+        The camera number that is detected by the system.
+    chessboard_size: str
+        Size of the grid of the chessboard.
+        For a chess board of ``9 x 8`` pattern, use the input as ``(8, 7)``.
+    frame_size: tuple, default ``(672, 376)``
+        Frame size to select.
+        The size is specific to Zed camera as the camera is designed for specific resolutions.
+        Available options are ``[(672, 376), (1280, 720), (1920, 1080), (2208, 1242)]``
+    save_path: str, default ``''``
+        Path to the directory to save data.
+    square_size: float, default ``0.039``.
+        The size of the square of the chessboard. 
+        The default dimension is in meters.
+        The chessboard square must be measured manually as the print dimension of the board may differ
+        from the screen dimension when designing the template.
+        If other units are chosen, make sure to stay consistent with the units in depth detection as well.
+    chessboard_flag: int, default ``cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE``
+        Uses the threshold from the enum provided in opencv.
+    cornerSubPix_winSize: tuple, default ``(11,11)``
+        A tuple of ``int`` that uses the kerner size refined corners.
+    cornerSubPix_zeroZone: tuple, default ``(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)``
+        A tuple of critereo that is used in fine grained sub pixed calculations.
+    calibrateCamera_flags: int, default ``cv2.CALIB_ZERO_TANGENT_DIST``
+        Calibrate camera flags
+    stereoCalibrate_flags: int, default ``cv2.CALIB_FIX_INTRINSIC``
+        Flags for calibrating stereo camera.
+    param_save_path: str, default ``None``
+        Path to save the calibration parameters.
+    image_limit: int, default ``20``
+        Limit the images. 
+        It turns out that more image increases the reprojection error.
+    save_rendered: str, default ``None``
+        Path to save the rendered images.
+
+    Returns
+    -------
+    retval: float
+        Reprojection error.
+        A value less than ``1`` is acceptable. 
+        A good result would be to have half a pixel i.e. ``0.5`` error.
+    calib_save_path: str
+        The path to the directory where the calibration data is saved.
+    
+    """
+    # extracting the chessboard size
+    ch_r, ch_c = chessboard_size
+
+    # Creating object points
+    objp = np.zeros((ch_r * ch_c, 3), np.float32)
+
+    # reshaping to match t
+    objp[:, :2] = np.mgrid[0:ch_r, 0:ch_c].T.reshape(-1, 2)
+
+    objp *= square_size
+
+    # list to store object points and image points from both cameras
+    # 3D real world space of the chess board
+    # ``objpoints`` is the list of the list of ``objp`` for each set of stereo images  
+    objpoints = []
+
+    # 2D image points in the left and right image frame
+    # Consists of the list of list of image points per set of stereo images
+    imgpoints_left = []
+    imgpoints_right = []
+
+    print("Starting the live calibration process. Press ESC key to stop the process.")
+
+    image_count = 0
+
+    # date for creating directory
+    ct = datetime.datetime.now()
+    date = ct.strftime("%Y-%m-%d-%H-%M")
+
+    # make directory
+    calib_save_path = os.path.join(save_path, date)
+    path_left = os.path.join(calib_save_path, 'stereo_left')
+    path_right = os.path.join(calib_save_path, 'stereo_right')
+
+    print(f"Creating directories: \n{path_left}\n{path_right}")
+    os.makedirs(path_left, exist_ok=True)
+    os.makedirs(path_right, exist_ok=True)
+
+    if save_rendered:
+        left_path_render = os.path.join(calib_save_path, save_rendered, 'stereo_left')
+        right_path_render = os.path.join(calib_save_path, save_rendered, 'stereo_right')
+        os.makedirs(left_path_render, exist_ok=True)
+        os.makedirs(right_path_render, exist_ok=True)
+
+    width, height = frame_size
+    cap = cv2.VideoCapture(cam)
+
+    stereo_width = width * 2
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, stereo_width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
+    try:
+        while True:
+            success, img = cap.read()
+
+            imgL = img[:, :width, :]
+            imgR = img[:, width:, :]
+
+
+            imgL_raw = copy.copy(imgL)
+            imgR_raw = copy.copy(imgR)
+    
+            # Convering the images from BGR to Gray
+            grayL = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
+            grayR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
+    
+            # Chessboard corners for left and right images
+            retL, cornersL = cv2.findChessboardCorners(image=grayL, 
+                                                       patternSize=chessboard_size, 
+                                                       flags=chessboard_flag)
+            
+            retR, cornersR = cv2.findChessboardCorners(image=grayR, 
+                                                       patternSize=chessboard_size, 
+                                                       flags=chessboard_flag)
+    
+            if retL and retR:
+                # Calculating subpixel to get more accurate result
+                cornersL = cv2.cornerSubPix(image=grayL, corners=cornersL, winSize=cornerSubPix_winSize, zeroZone=cornerSubPix_zeroZone, criteria=cornerSubPix_criteria)
+                cornersR = cv2.cornerSubPix(image=grayR, corners=cornersR, winSize=cornerSubPix_winSize, zeroZone=cornerSubPix_zeroZone, criteria=cornerSubPix_criteria)
+
+                # Drawing the corners upon detection
+                cv2.drawChessboardCorners(image=imgL, patternSize=chessboard_size, corners=cornersL, patternWasFound=retL)
+                cv2.drawChessboardCorners(image=imgR, patternSize=chessboard_size, corners=cornersR, patternWasFound=retR)
+
+            if view_scaling_factor > 1:
+                view_resize_res = [i // view_scaling_factor for i in [width, height]]
+                
+                image_left = cv2.resize(imgL, view_resize_res, interpolation=cv2.INTER_AREA)
+                image_right = cv2.resize(imgR, view_resize_res, interpolation=cv2.INTER_AREA)
+
+            else:
+                image_left = imgL
+                image_right = imgR
+
+            stereo_image = np.hstack((image_left, image_right))
+            cv2.imshow("stereo", stereo_image)
+
+            key = cv2.waitKey(5)
+
+            if key == ord('s'):
+                if retL and retR:
+                    # Saving raw image
+                    cv2.imwrite(os.path.join(path_left, f'left_img{image_count}.png'), imgL_raw)
+                    cv2.imwrite(os.path.join(path_right, f'right_img{image_count}.png'), imgR_raw)
+
+                if save_rendered:
+                    cv2.imwrite(os.path.join(left_path_render, f'left_img{image_count}.png'), imgL)
+                    cv2.imwrite(os.path.join(right_path_render, f'right_img{image_count}.png'), imgR)
+
+                # Adding the object points of the current set of images to the list of objpoints for all the images
+                objpoints.append(objp)
+                
+                # Appending list of refined cornerpoints to the imagepoints
+                imgpoints_left.append(cornersL)
+                imgpoints_right.append(cornersR)
+
+                image_count += 1
+                print(f"Images detected: {image_count}")
+
+            if key == 27 or image_count > image_limit:
+                break
+    except KeyboardInterrupt:
+        print("Interrupted by the user.")
+        cap.release()
+        cv2.destroyAllWindows()
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+
+    # extracting shape of the image from last grayL in the list
+    img_size=grayL.shape[::-1]
+
+    try:
+
+        # Calibrating individual camera matrix and distortion coefficients to use later in stereoCalibrate for more precision
+        retL, mtxL, distL, rvecsL, tvecsL = cv2.calibrateCamera(objectPoints=objpoints, imagePoints=imgpoints_left, imageSize=img_size, cameraMatrix=None, distCoeffs=None, flags=calibrateCamera_flags)
+        retR, mtxR, distR, rvecsR, tvecsR = cv2.calibrateCamera(objectPoints=objpoints, imagePoints=imgpoints_right, imageSize=img_size, cameraMatrix=None, distCoeffs=None, flags=calibrateCamera_flags)
+    
+        # Calibrate stereo
+        retval, mtxL, distL, mtxR, distR, R, T, E, F = cv2.stereoCalibrate(objectPoints=objpoints,
+                                                                           imagePoints1=imgpoints_left,
+                                                                           imagePoints2=imgpoints_right,
+                                                                           cameraMatrix1=mtxL,
+                                                                           distCoeffs1=distL,
+                                                                           cameraMatrix2=mtxR,
+                                                                           distCoeffs2=distR,
+                                                                           imageSize=img_size,
+                                                                           criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6),
+                                                                           flags=stereoCalibrate_flags)
+    
+        print(f"Calibration RMS error: {retval}")
+    
+        # Stereo rectification
+        R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(cameraMatrix1=mtxL, distCoeffs1=distL, cameraMatrix2=mtxR, distCoeffs2=distR, imageSize=img_size, R=R, T=T)
+        
+        # save calibration results
+        if param_save_path:
+            save_path = os.path.join(param_save_path, 'stereo_calib.npz')
+        else:
+            save_path = os.path.join(calib_save_path, 'stereo_calib.npz')
+        
+        np.savez(save_path, mtxL=mtxL, distL=distL, mtxR=mtxR, distR=distR, R=R, T=T, R1=R1, R2=R2, P1=P1, P2=P2, Q=Q)
+            
+        return retval, calib_save_path
+    except Exception as e:
+        print(e)

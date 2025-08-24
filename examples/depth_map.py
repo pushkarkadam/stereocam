@@ -7,9 +7,12 @@ from stereocam import *
 
 def main():
     # Calibration data path
-    calib_path = "../images/case2/stereo_calib.npz"
-    imageL_path = "../images/exp_data_collection/weld_tab/stereo_left/images/0.png"
-    imageR_path = "../images/exp_data_collection/weld_tab/stereo_right/images/0.png"
+
+    stereo_config = load_stereo_params("stereo_config.yaml")
+
+    calib_path = stereo_config["calib_path"]
+    imageL_path = stereo_config["imageL_path"]
+    imageR_path = stereo_config["imageR_path"]
 
     # time calculation
     start = time.time()
